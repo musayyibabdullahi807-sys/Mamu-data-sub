@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>MAMU DATA SUB</title>
+
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+
+<body>
+
+  <!-- ================= APP ================= -->
+  <div id="app">
+
+    <!-- ================= HOME ================= -->
+    <section class="page active" id="homePage">
+
+      <!-- Header -->
+      <header class="header">
+
+        <div class="topbar">
+
+          <div class="brand">
+
+            <div class="logo">
+              M
+            </div>
+
+            <div>
+              <h1>MAMU DATA SUB</h1>
+              <p>Fast • Cheap • Reliable VTU</p>
+            </div>
+
+          </div>
+
+          <button class="icon-btn" id="notificationBtn">
+            🔔
+            <span class="notification-dot"></span>
+          </button>
+
+        </div>
+
+        <div class="welcome">
+
+          <span>Welcome back</span>
+
+          <h2 id="welcomeName">
+            MAMU
+          </h2>
+
+        </div>
+
+      </header>
+
+
+      <!-- ================= WALLET ================= -->
+
+      <section class="wallet-card">
+
+        <div class="wallet-top">
+
+          <div>
+            <span class="wallet-label">
+              Wallet Balance
+            </span>
+
+            <div class="balance-row">
+
+              <strong id="walletBalance">
+                ₦0.00
+              </strong>
+
+              <button id="toggleBalance">
+                👁
+              </button>
+
+            </div>
+          </div>
+
+          <div class="wallet-icon">
+            ₦
+          </div>
+
+        </div>
+
+
+        <div class="wallet-actions">
+
+          <button id="fundWalletBtn">
+            <span>＋</span>
+            Fund Wallet
+          </button>
+
+          <button id="historyBtn">
+            <span>↻</span>
+            History
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= QUICK SERVICES ================= -->
+
+      <section class="section">
+
+        <div class="section-title">
+          <h3>Quick Services</h3>
+        </div>
+
+
+        <div class="service-grid">
+
+          <button class="service-card" data-page="dataPage">
+
+            <div class="service-icon data-icon">
+              📶
+            </div>
+
+            <strong>Data</strong>
+
+            <small>
+              Buy data
+            </small>
+
+          </button>
+
+
+          <button class="service-card" data-page="airtimePage">
+
+            <div class="service-icon airtime-icon">
+              📞
+            </div>
+
+            <strong>Airtime</strong>
+
+            <small>
+              Buy airtime
+            </small>
+
+          </button>
+
+
+          <button class="service-card" data-page="electricityPage">
+
+            <div class="service-icon power-icon">
+              ⚡
+            </div>
+
+            <strong>Electricity</strong>
+
+            <small>
+              Pay bills
+            </small>
+
+          </button>
+
+
+          <button class="service-card" data-page="tvPage">
+
+            <div class="service-icon tv-icon">
+              📺
+            </div>
+
+            <strong>TV</strong>
+
+            <small>
+              Subscription
+            </small>
+
+          </button>
+
+
+          <button class="service-card" data-page="referralPage">
+
+            <div class="service-icon referral-icon">
+              🎁
+            </div>
+
+            <strong>Referral</strong>
+
+            <small>
+              Earn rewards
+            </small>
+
+          </button>
+
+
+          <button class="service-card" data-page="transactionsPage">
+
+            <div class="service-icon transaction-icon">
+              📋
+            </div>
+
+            <strong>Transactions</strong>
+
+            <small>
+              View history
+            </small>
+
+          </button>
+
+
+          <button class="service-card" id="profileServiceBtn">
+
+            <div class="service-icon profile-icon">
+              👤
+            </div>
+
+            <strong>Profile</strong>
+
+            <small>
+              My account
+            </small>
+
+          </button>
+
+
+          <button class="service-card" id="supportBtn">
+
+            <div class="service-icon support-icon">
+              🎧
+            </div>
+
+            <strong>Support</strong>
+
+            <small>
+              Get help
+            </small>
+
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= DATA DEALS ================= -->
+
+      <section class="section">
+
+        <div class="section-heading">
+
+          <div>
+            <span class="section-label">
+              DATA
+            </span>
+
+            <h3>
+              Popular Plans
+            </h3>
+          </div>
+
+          <button id="viewDataBtn">
+            View all
+          </button>
+
+        </div>
+
+
+        <div class="plans-container" id="popularPlans">
+
+          <div class="loading-card">
+            Loading data plans...
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ================= RECENT TRANSACTIONS ================= -->
+
+      <section class="section">
+
+        <div class="section-heading">
+
+          <div>
+            <span class="section-label">
+              ACTIVITY
+            </span>
+
+            <h3>
+              Recent Transactions
+            </h3>
+          </div>
+
+          <button id="viewTransactionsBtn">
+            View all
+          </button>
+
+        </div>
+
+
+        <div class="transactions-card" id="recentTransactions">
+
+          <div class="empty-state">
+            <div>
+              📋
+            </div>
+
+            <p>
+              Loading transactions...
+            </p>
+          </div>
+
+        </div>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- ================= DATA PAGE ================= -->
+
+    <section class="page" id="dataPage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>Buy Data</h2>
+          <p>Choose your network and plan</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div class="form-card">
+
+          <label>
+            Network
+          </label>
+
+          <select id="dataNetwork">
+
+            <option value="">
+              Select network
+            </option>
+
+            <option value="mtn">
+              MTN
+            </option>
+
+            <option value="airtel">
+              Airtel
+            </option>
+
+            <option value="glo">
+              Glo
+            </option>
+
+            <option value="9mobile">
+              9mobile
+            </option>
+
+          </select>
+
+
+          <label>
+            Phone Number
+          </label>
+
+          <input
+            id="dataPhone"
+            type="tel"
+            inputmode="numeric"
+            placeholder="0803 000 0000"
+          >
+
+
+          <label>
+            Data Plan
+          </label>
+
+          <select id="dataPlan">
+
+            <option value="">
+              Select a plan
+            </option>
+
+          </select>
+
+
+          <button class="primary-btn" id="purchaseDataBtn">
+
+            Purchase Data
+
+          </button>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= AIRTIME PAGE ================= -->
+
+    <section class="page" id="airtimePage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>Buy Airtime</h2>
+          <p>Instant airtime delivery</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div class="form-card">
+
+          <label>
+            Network
+          </label>
+
+          <select id="airtimeNetwork">
+
+            <option value="">
+              Select network
+            </option>
+
+            <option value="mtn">
+              MTN
+            </option>
+
+            <option value="airtel">
+              Airtel
+            </option>
+
+            <option value="glo">
+              Glo
+            </option>
+
+            <option value="9mobile">
+              9mobile
+            </option>
+
+          </select>
+
+
+          <label>
+            Phone Number
+          </label>
+
+          <input
+            id="airtimePhone"
+            type="tel"
+            inputmode="numeric"
+            placeholder="0803 000 0000"
+          >
+
+
+          <label>
+            Amount
+          </label>
+
+          <input
+            id="airtimeAmount"
+            type="number"
+            inputmode="decimal"
+            placeholder="₦100"
+            min="1"
+          >
+
+
+          <button class="primary-btn" id="purchaseAirtimeBtn">
+
+            Buy Airtime
+
+          </button>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= ELECTRICITY PAGE ================= -->
+
+    <section class="page" id="electricityPage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>Electricity</h2>
+          <p>Pay your electricity bill</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div class="form-card">
+
+          <label>
+            Electricity Provider
+          </label>
+
+          <select id="electricityProvider">
+
+            <option value="">
+              Select provider
+            </option>
+
+            <option value="abuja-electric">
+              Abuja Electricity
+            </option>
+
+            <option value="ibadan-electric">
+              Ibadan Electricity
+            </option>
+
+            <option value="ikeja-electric">
+              Ikeja Electric
+            </option>
+
+            <option value="eko-electric">
+              Eko Electric
+            </option>
+
+            <option value="enugu-electric">
+              Enugu Electricity
+            </option>
+
+            <option value="kaduna-electric">
+              Kaduna Electricity
+            </option>
+
+            <option value="yola-electric">
+              Yola Electricity
+            </option>
+
+            <option value="aba-electric">
+              Aba Electricity
+            </option>
+
+            <option value="benin-electric">
+              Benin Electricity
+            </option>
+
+          </select>
+
+
+          <label>
+            Customer ID / Meter Number
+          </label>
+
+          <input
+            id="electricityCustomer"
+            type="text"
+            inputmode="numeric"
+            placeholder="Enter customer ID"
+          >
+
+
+          <label>
+            Phone Number
+          </label>
+
+          <input
+            id="electricityPhone"
+            type="tel"
+            inputmode="numeric"
+            placeholder="0803 000 0000"
+          >
+
+
+          <label>
+            Amount
+          </label>
+
+          <input
+            id="electricityAmount"
+            type="number"
+            inputmode="decimal"
+            placeholder="₦100"
+            min="100"
+          >
+
+
+          <button class="primary-btn" id="payElectricityBtn">
+
+            Pay Electricity
+
+          </button>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= TV PAGE ================= -->
+
+    <section class="page" id="tvPage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>TV Subscription</h2>
+          <p>DStv • GOtv • Startimes</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div class="form-card">
+
+          <label>
+            Provider
+          </label>
+
+          <select id="tvProvider">
+
+            <option value="">
+              Select provider
+            </option>
+
+            <option value="dstv">
+              DStv
+            </option>
+
+            <option value="gotv">
+              GOtv
+            </option>
+
+            <option value="startimes">
+              Startimes
+            </option>
+
+          </select>
+
+
+          <label>
+            Customer ID / Smartcard
+          </label>
+
+          <input
+            id="tvCustomer"
+            type="text"
+            inputmode="numeric"
+            placeholder="Enter customer number"
+          >
+
+
+          <label>
+            Phone Number
+          </label>
+
+          <input
+            id="tvPhone"
+            type="tel"
+            inputmode="numeric"
+            placeholder="0803 000 0000"
+          >
+
+
+          <label>
+            Plan
+          </label>
+
+          <input
+            id="tvPlan"
+            type="text"
+            placeholder="Enter plan"
+          >
+
+
+          <label>
+            Amount
+          </label>
+
+          <input
+            id="tvAmount"
+            type="number"
+            inputmode="decimal"
+            placeholder="₦"
+          >
+
+
+          <button class="primary-btn" id="payTvBtn">
+
+            Subscribe
+
+          </button>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= FUND WALLET ================= -->
+
+    <section class="page" id="fundPage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>Fund Wallet</h2>
+          <p>Add money to your MAMU wallet</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div class="fund-card">
+
+          <div class="fund-icon">
+            ₦
+          </div>
+
+          <h3>
+            Wallet Funding
+          </h3>
+
+          <p>
+            Real wallet funding will be connected to
+            the payment provider after the main app
+            features are completed.
+          </p>
+
+        </div>
+
+
+        <div class="form-card">
+
+          <label>
+            Amount
+          </label>
+
+          <input
+            id="fundAmount"
+            type="number"
+            inputmode="decimal"
+            placeholder="₦1,000"
+          >
+
+
+          <button class="primary-btn" id="fundBtn">
+
+            Fund Wallet
+
+          </button>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= TRANSACTIONS ================= -->
+
+    <section class="page" id="transactionsPage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>Transactions</h2>
+          <p>Your complete transaction history</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div
+          class="transactions-card large"
+          id="allTransactions"
+        >
+
+          <div class="empty-state">
+            Loading transactions...
+          </div>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= REFERRAL ================= -->
+
+    <section class="page" id="referralPage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>Referral</h2>
+          <p>Invite friends and earn commission</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div class="referral-hero">
+
+          <div class="referral-icon-big">
+            🎁
+          </div>
+
+          <h2>
+            Your Referral Code
+          </h2>
+
+          <strong id="referralCode">
+            Loading...
+          </strong>
+
+          <button id="copyReferralBtn">
+            Copy Code
+          </button>
+
+        </div>
+
+
+        <div class="stats-grid">
+
+          <div class="stat-card">
+            <span>Total Referrals</span>
+            <strong id="totalReferrals">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Successful Commissions</span>
+            <strong id="successfulCommissions">0</strong>
+          </div>
+
+          <div class="stat-card">
+            <span>Referral Earnings</span>
+            <strong id="referralEarnings">₦0.00</strong>
+          </div>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= PROFILE ================= -->
+
+    <section class="page" id="profilePage">
+
+      <header class="inner-header">
+
+        <button class="back-btn" data-back="homePage">
+          ‹
+        </button>
+
+        <div>
+          <h2>My Profile</h2>
+          <p>Manage your account</p>
+        </div>
+
+      </header>
+
+
+      <main class="page-content">
+
+        <div class="profile-header">
+
+          <div class="avatar" id="profileAvatar">
+            M
+          </div>
+
+          <div>
+
+            <h3 id="profileName">
+              MAMU
+            </h3>
+
+            <p id="profileUsername">
+              @mamu
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="form-card">
+
+          <label>
+            Username
+          </label>
+
+          <input
+            id="profileUsernameInput"
+            type="text"
+            placeholder="Username"
+          >
+
+
+          <label>
+            Full Name
+          </label>
+
+          <input
+            id="profileNameInput"
+            type="text"
+            placeholder="Full name"
+          >
+
+
+          <label>
+            Phone Number
+          </label>
+
+          <input
+            id="profilePhoneInput"
+            type="tel"
+            disabled
+          >
+
+
+          <label>
+            Email
+          </label>
+
+          <input
+            id="profileEmailInput"
+            type="email"
+            placeholder="Email"
+          >
+
+
+          <label>
+            State
+          </label>
+
+          <input
+            id="profileStateInput"
+            type="text"
+            placeholder="State"
+          >
+
+
+          <label>
+            City
+          </label>
+
+          <input
+            id="profileCityInput"
+            type="text"
+            placeholder="City"
+          >
+
+
+          <label>
+            Address
+          </label>
+
+          <textarea
+            id="profileAddressInput"
+            placeholder="Address"
+          ></textarea>
+
+
+          <label>
+            Account Type
+          </label>
+
+          <input
+            id="profileAccountTypeInput"
+            value="Smart Earner"
+            disabled
+          >
+
+
+          <button
+            class="primary-btn"
+            id="saveProfileBtn"
+          >
+            Save Profile
+          </button>
+
+        </div>
+
+      </main>
+
+    </section>
+
+
+
+    <!-- ================= BOTTOM NAV ================= -->
+
+    <nav class="bottom-nav">
+
+      <button
+        class="nav-item active"
+        data-page="homePage"
+      >
+        <span>⌂</span>
+        <small>Home</small>
+      </button>
+
+
+      <button
+        class="nav-item"
+        data-page="dataPage"
+      >
+        <span>◉</span>
+        <small>Data</small>
+      </button>
+
+
+      <button
+        class="nav-item fund-nav"
+        data-page="fundPage"
+      >
+        <span>＋</span>
+        <small>Fund</small>
+      </button>
+
+
+      <button
+        class="nav-item"
+        data-page="transactionsPage"
+      >
+        <span>▤</span>
+        <small>History</small>
+      </button>
+
+
+      <button
+        class="nav-item"
+        data-page="profilePage"
+      >
+        <span>♙</span>
+        <small>Profile</small>
+      </button>
+
+    </nav>
+
+
+
+    <!-- ================= SUPPORT BUTTON ================= -->
+
+    <button
+      class="support-floating"
+      id="whatsappBtn"
+      aria-label="WhatsApp Support"
+    >
+      <span>☏</span>
+    </button>
+
+
+
+    <!-- ================= TOAST ================= -->
+
+    <div id="toast"></div>
+
+  </div>
+
+
+  <script src="./js/app.js"></script>
+
+</body>
+</html>
