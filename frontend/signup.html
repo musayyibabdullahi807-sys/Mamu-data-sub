@@ -2,31 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
   <title>Create Account | MAMU DATA SUB</title>
 
-  <meta
-    name="description"
-    content="Create your MAMU DATA SUB account"
-  >
-
   <style>
     :root {
-      --bg: #080c16;
-      --card: #121a2b;
-      --card-2: #0e1524;
-      --gold: #f5c542;
-      --gold-2: #e89b22;
-      --text: #ffffff;
-      --muted: #9aa6bb;
-      --border: rgba(255, 255, 255, 0.08);
-      --danger: #ff5c6c;
-      --success: #25d366;
+      --black: #050507;
+      --black-soft: #0d0d12;
+      --white: #ffffff;
+      --gray-bg: #f5f5f7;
+      --gray: #8b8d95;
+      --border: #dedee3;
+      --danger: #c92f3b;
+      --success: #15834a;
     }
 
     * {
@@ -50,152 +39,169 @@
         Arial,
         sans-serif;
 
+      background: var(--gray-bg);
+      color: var(--black);
+    }
+
+    .page {
+      width: 100%;
+      min-height: 100vh;
+      background: var(--white);
+    }
+
+    /* =========================
+       BLACK HEADER
+       ========================= */
+
+    .hero {
+      position: relative;
+      height: 245px;
       background:
         radial-gradient(
-          circle at top,
-          rgba(245, 197, 66, 0.10),
-          transparent 35%
-        ),
-        var(--bg);
+          circle at 50% 0%,
+          #22222a 0%,
+          var(--black) 58%
+        );
 
-      color: var(--text);
-      min-height: 100vh;
-
-      display: flex;
-      justify-content: center;
-
-      padding: 24px 16px;
+      color: white;
+      padding: 28px 22px 0;
+      overflow: hidden;
     }
 
-    .signup-wrapper {
+    .hero-content {
       width: 100%;
-      max-width: 430px;
+      max-width: 520px;
+      margin: 0 auto;
     }
 
-    /* BRAND */
+    .top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
     .brand {
-      text-align: center;
-      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .brand-logo {
-      width: 68px;
-      height: 68px;
-
-      margin: 0 auto 13px;
-
+    .brand-mark {
+      width: 43px;
+      height: 43px;
+      border-radius: 13px;
+      background: white;
+      color: var(--black);
       display: flex;
       align-items: center;
       justify-content: center;
-
-      border-radius: 21px;
-
-      background:
-        linear-gradient(
-          135deg,
-          var(--gold),
-          var(--gold-2)
-        );
-
-      color: #111;
-
-      font-size: 24px;
       font-weight: 900;
-
-      box-shadow:
-        0 12px 35px rgba(245, 197, 66, 0.22);
+      font-size: 18px;
     }
 
-    .brand h1 {
-      font-size: 24px;
+    .brand-name {
+      font-size: 16px;
       font-weight: 900;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.3px;
     }
 
-    .brand h1 span {
-      color: var(--gold);
+    .brand-sub {
+      color: #a7a7af;
+      font-size: 10px;
+      margin-top: 2px;
     }
 
-    .brand p {
-      margin-top: 6px;
-      color: var(--muted);
+    .secure {
+      color: #a7a7af;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .hero-title {
+      margin-top: 38px;
+    }
+
+    .hero-title h1 {
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: -1px;
+    }
+
+    .hero-title p {
+      margin-top: 9px;
+      color: #a7a7af;
       font-size: 13px;
+      line-height: 1.5;
+      max-width: 330px;
     }
 
-    /* CARD */
+    /* =========================
+       WAVE
+       ========================= */
+
+    .wave {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -1px;
+      width: 100%;
+      height: 82px;
+      display: block;
+    }
+
+    /* =========================
+       CONTENT
+       ========================= */
+
+    .content {
+      width: 100%;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 0 20px 30px;
+      margin-top: -1px;
+      position: relative;
+      z-index: 2;
+    }
 
     .signup-card {
-      background:
-        linear-gradient(
-          145deg,
-          rgba(255,255,255,0.035),
-          rgba(255,255,255,0.015)
-        ),
-        var(--card);
-
+      background: white;
       border: 1px solid var(--border);
-
       border-radius: 24px;
-
-      padding: 24px 20px;
-
+      padding: 21px;
       box-shadow:
-        0 25px 70px rgba(0, 0, 0, 0.35);
+        0 16px 45px rgba(0, 0, 0, 0.08);
     }
 
-    .signup-card h2 {
-      font-size: 22px;
-      margin-bottom: 7px;
-    }
-
-    .subtitle {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.5;
-      margin-bottom: 22px;
-    }
-
-    /* MESSAGE */
+    /* =========================
+       MESSAGE
+       ========================= */
 
     .message {
       display: none;
-
-      margin-bottom: 17px;
-
       padding: 12px 13px;
-
       border-radius: 12px;
-
+      margin-bottom: 17px;
       font-size: 13px;
       line-height: 1.45;
     }
 
     .message.error {
       display: block;
-
-      color: #ffb5bd;
-
-      background:
-        rgba(255, 92, 108, 0.09);
-
-      border:
-        1px solid rgba(255, 92, 108, 0.20);
+      color: var(--danger);
+      background: #fff1f2;
+      border: 1px solid #ffd5d8;
     }
 
     .message.success {
       display: block;
-
-      color: #a8f5c8;
-
-      background:
-        rgba(37, 211, 102, 0.08);
-
-      border:
-        1px solid rgba(37, 211, 102, 0.18);
+      color: var(--success);
+      background: #eefaf4;
+      border: 1px solid #ccebd9;
     }
 
-    /* FORM */
+    /* =========================
+       FORM
+       ========================= */
 
     .form-group {
       margin-bottom: 16px;
@@ -203,143 +209,126 @@
 
     .form-group label {
       display: block;
-
       margin-bottom: 8px;
-
-      color: #dce3ef;
-
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 750;
     }
 
     .optional {
-      color: #68748a;
+      color: var(--gray);
       font-size: 11px;
       font-weight: 500;
     }
 
-    .input-wrapper {
+    .input-wrap {
       position: relative;
-    }
-
-    .input-icon {
-      position: absolute;
-
-      left: 14px;
-      top: 50%;
-
-      transform: translateY(-50%);
-
-      font-size: 17px;
-
-      opacity: 0.75;
-
-      pointer-events: none;
     }
 
     input {
       width: 100%;
-
-      height: 51px;
-
-      padding:
-        0 45px 0 44px;
-
-      border:
-        1px solid var(--border);
-
+      height: 52px;
+      border: 1px solid var(--border);
       border-radius: 14px;
-
       outline: none;
-
-      background: var(--card-2);
-
-      color: var(--text);
-
+      background: #fafafa;
+      color: var(--black);
       font-size: 15px;
-
-      transition:
-        border-color 0.2s,
-        box-shadow 0.2s;
+      padding: 0 15px;
+      transition: 0.2s;
     }
 
     input::placeholder {
-      color: #68748a;
+      color: #a0a1a8;
     }
 
     input:focus {
-      border-color:
-        rgba(245, 197, 66, 0.7);
-
+      border-color: var(--black);
+      background: white;
       box-shadow:
-        0 0 0 3px
-        rgba(245, 197, 66, 0.09);
+        0 0 0 3px rgba(5, 5, 7, 0.06);
     }
 
-    .password-toggle {
+    .phone-prefix {
       position: absolute;
-
-      right: 12px;
+      left: 15px;
       top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      font-weight: 700;
+      color: #777982;
+      pointer-events: none;
+    }
 
+    .phone-input {
+      padding-left: 53px;
+    }
+
+    /* =========================
+       EYE BUTTON
+       ========================= */
+
+    .eye-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
       transform: translateY(-50%);
 
+      width: 38px;
+      height: 38px;
+
       border: 0;
-      background: transparent;
+      border-radius: 10px;
 
-      color: var(--muted);
+      background: #eeeeF1;
+      color: #15151a;
 
-      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       cursor: pointer;
-
-      padding: 5px;
     }
 
-    /* PASSWORD HINT */
+    .eye-btn svg {
+      width: 19px;
+      height: 19px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
-    .password-hint {
+    .password-input {
+      padding-right: 58px;
+    }
+
+    .hint {
       margin-top: 7px;
-
-      color: #68748a;
-
+      color: var(--gray);
       font-size: 11px;
     }
 
-    /* CREATE BUTTON */
+    /* =========================
+       BUTTON
+       ========================= */
 
     .signup-btn {
       width: 100%;
-
-      height: 53px;
-
-      margin-top: 5px;
+      height: 54px;
+      margin-top: 3px;
 
       border: 0;
-
       border-radius: 15px;
 
-      background:
-        linear-gradient(
-          135deg,
-          var(--gold),
-          var(--gold-2)
-        );
-
-      color: #111;
+      background: var(--black);
+      color: white;
 
       font-size: 15px;
-      font-weight: 900;
+      font-weight: 800;
 
       cursor: pointer;
-
-      box-shadow:
-        0 12px 30px
-        rgba(245, 197, 66, 0.16);
-
-      transition:
-        transform 0.15s,
-        opacity 0.15s;
+      transition: transform 0.15s, opacity 0.15s;
     }
 
     .signup-btn:active {
@@ -347,86 +336,25 @@
     }
 
     .signup-btn:disabled {
-      opacity: 0.6;
+      opacity: 0.55;
       cursor: not-allowed;
     }
 
-    /* DIVIDER */
-
-    .divider {
-      display: flex;
-      align-items: center;
-
-      gap: 12px;
-
-      margin: 23px 0;
-    }
-
-    .divider span {
-      flex: 1;
-
-      height: 1px;
-
-      background: var(--border);
-    }
-
-    .divider p {
-      color: #68748a;
-      font-size: 12px;
-    }
-
-    /* LOGIN */
-
-    .login-text {
-      text-align: center;
-
-      color: var(--muted);
-
-      font-size: 14px;
-    }
-
-    .login-text a {
-      color: var(--gold);
-
-      text-decoration: none;
-
-      font-weight: 800;
-    }
-
-    .login-text a:hover {
-      text-decoration: underline;
-    }
-
-    /* FOOTER */
-
-    .footer {
-      text-align: center;
-
-      margin-top: 19px;
-
-      color: #58657a;
-
-      font-size: 11px;
-    }
-
-    /* SPINNER */
+    /* =========================
+       SPINNER
+       ========================= */
 
     .spinner {
-      width: 18px;
-      height: 18px;
-
+      width: 16px;
+      height: 16px;
       display: inline-block;
 
-      border:
-        2px solid rgba(17,17,17,0.3);
-
-      border-top-color: #111;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: white;
 
       border-radius: 50%;
 
-      animation:
-        spin 0.7s linear infinite;
-
+      animation: spin 0.7s linear infinite;
       vertical-align: middle;
 
       margin-right: 7px;
@@ -438,22 +366,70 @@
       }
     }
 
-    @media (max-width: 360px) {
-      body {
-        padding: 16px 12px;
+    /* =========================
+       LOGIN
+       ========================= */
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 23px 0;
+    }
+
+    .divider span {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .divider p {
+      color: var(--gray);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .login-box {
+      text-align: center;
+      color: var(--gray);
+      font-size: 13px;
+    }
+
+    .login-box a {
+      color: var(--black);
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .login-box a:hover {
+      text-decoration: underline;
+    }
+
+    .footer {
+      text-align: center;
+      color: #a2a3a9;
+      font-size: 10px;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 380px) {
+      .hero {
+        height: 235px;
+        padding-left: 17px;
+        padding-right: 17px;
+      }
+
+      .content {
+        padding-left: 15px;
+        padding-right: 15px;
       }
 
       .signup-card {
-        padding: 21px 16px;
+        padding: 18px;
       }
 
-      .brand-logo {
-        width: 62px;
-        height: 62px;
-      }
-
-      .brand h1 {
-        font-size: 22px;
+      .hero-title h1 {
+        font-size: 27px;
       }
     }
   </style>
@@ -461,49 +437,86 @@
 
 <body>
 
-  <main class="signup-wrapper">
+  <!-- =========================
+       HEADER
+       ========================= -->
 
-    <!-- BRAND -->
+  <section class="hero">
 
-    <div class="brand">
+    <div class="hero-content">
 
-      <div class="brand-logo">
-        M
+      <div class="top-row">
+
+        <div class="brand">
+
+          <div class="brand-mark">
+            M
+          </div>
+
+          <div>
+            <div class="brand-name">
+              MAMU DATA SUB
+            </div>
+
+            <div class="brand-sub">
+              Smart data and digital services
+            </div>
+          </div>
+
+        </div>
+
+        <div class="secure">
+          Secure account
+        </div>
+
       </div>
 
-      <h1>
-        MAMU <span>DATA SUB</span>
-      </h1>
 
-      <p>
-        Smart data, airtime & bills
-      </p>
+      <div class="hero-title">
+
+        <h1>
+          Create your account
+        </h1>
+
+        <p>
+          Register to manage data, airtime and digital services.
+        </p>
+
+      </div>
 
     </div>
 
 
-    <!-- SIGNUP CARD -->
+    <!-- WAVE -->
+
+    <svg
+      class="wave"
+      viewBox="0 0 1440 160"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M0,70 C260,155 430,155 720,80 C1010,5 1180,5 1440,70 L1440,160 L0,160 Z"
+        fill="#ffffff"
+      />
+    </svg>
+
+  </section>
+
+
+  <!-- =========================
+       CONTENT
+       ========================= -->
+
+  <main class="content">
 
     <section class="signup-card">
-
-      <h2>
-        Create account 🚀
-      </h2>
-
-      <p class="subtitle">
-        Create your MAMU DATA SUB account and get started.
-      </p>
-
-
-      <!-- MESSAGE -->
 
       <div
         id="message"
         class="message"
       ></div>
 
-
-      <!-- FORM -->
 
       <form id="signupForm">
 
@@ -515,23 +528,15 @@
             Full name
           </label>
 
-          <div class="input-wrapper">
-
-            <span class="input-icon">
-              👤
-            </span>
-
-            <input
-              type="text"
-              id="name"
-              name="name"
-              placeholder="Enter your full name"
-              autocomplete="name"
-              maxlength="80"
-              required
-            >
-
-          </div>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="Enter your full name"
+            autocomplete="name"
+            maxlength="80"
+            required
+          >
 
         </div>
 
@@ -544,17 +549,18 @@
             Phone number
           </label>
 
-          <div class="input-wrapper">
+          <div class="input-wrap">
 
-            <span class="input-icon">
-              📱
+            <span class="phone-prefix">
+              +234
             </span>
 
             <input
               type="tel"
               id="phone"
               name="phone"
-              placeholder="Enter your phone number"
+              class="phone-input"
+              placeholder="8012345678"
               autocomplete="tel"
               inputmode="numeric"
               maxlength="15"
@@ -577,21 +583,13 @@
             </span>
           </label>
 
-          <div class="input-wrapper">
-
-            <span class="input-icon">
-              ✉️
-            </span>
-
-            <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="Enter your email"
-              autocomplete="email"
-            >
-
-          </div>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="Enter your email address"
+            autocomplete="email"
+          >
 
         </div>
 
@@ -604,16 +602,13 @@
             Password
           </label>
 
-          <div class="input-wrapper">
-
-            <span class="input-icon">
-              🔒
-            </span>
+          <div class="input-wrap">
 
             <input
               type="password"
               id="password"
               name="password"
+              class="password-input"
               placeholder="Create a password"
               autocomplete="new-password"
               minlength="6"
@@ -622,18 +617,26 @@
 
             <button
               type="button"
-              class="password-toggle"
+              class="eye-btn"
               id="togglePassword"
               aria-label="Show password"
             >
-              👁️
+
+              <svg
+                id="passwordEye"
+                viewBox="0 0 24 24"
+              >
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/>
+                <circle cx="12" cy="12" r="2.5"/>
+              </svg>
+
             </button>
 
           </div>
 
-          <p class="password-hint">
-            Password must contain at least 6 characters.
-          </p>
+          <div class="hint">
+            Use at least 6 characters.
+          </div>
 
         </div>
 
@@ -646,17 +649,14 @@
             Confirm password
           </label>
 
-          <div class="input-wrapper">
-
-            <span class="input-icon">
-              🔐
-            </span>
+          <div class="input-wrap">
 
             <input
               type="password"
               id="confirmPassword"
               name="confirmPassword"
-              placeholder="Confirm your password"
+              class="password-input"
+              placeholder="Enter your password again"
               autocomplete="new-password"
               minlength="6"
               required
@@ -664,11 +664,19 @@
 
             <button
               type="button"
-              class="password-toggle"
+              class="eye-btn"
               id="toggleConfirmPassword"
               aria-label="Show password"
             >
-              👁️
+
+              <svg
+                id="confirmPasswordEye"
+                viewBox="0 0 24 24"
+              >
+                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/>
+                <circle cx="12" cy="12" r="2.5"/>
+              </svg>
+
             </button>
 
           </div>
@@ -687,27 +695,19 @@
             </span>
           </label>
 
-          <div class="input-wrapper">
-
-            <span class="input-icon">
-              🎁
-            </span>
-
-            <input
-              type="text"
-              id="referralCode"
-              name="referralCode"
-              placeholder="Enter referral code"
-              maxlength="30"
-              autocomplete="off"
-            >
-
-          </div>
+          <input
+            type="text"
+            id="referralCode"
+            name="referralCode"
+            placeholder="Enter referral code"
+            maxlength="30"
+            autocomplete="off"
+          >
 
         </div>
 
 
-        <!-- BUTTON -->
+        <!-- SUBMIT -->
 
         <button
           type="submit"
@@ -720,35 +720,25 @@
       </form>
 
 
-      <!-- DIVIDER -->
-
       <div class="divider">
-
         <span></span>
-
         <p>OR</p>
-
         <span></span>
-
       </div>
 
 
-      <!-- LOGIN -->
-
-      <p class="login-text">
+      <div class="login-box">
 
         Already have an account?
 
         <a href="./login.html">
-          Login
+          Log in
         </a>
 
-      </p>
+      </div>
 
     </section>
 
-
-    <!-- FOOTER -->
 
     <div class="footer">
       © 2026 MAMU DATA SUB
@@ -757,371 +747,7 @@
   </main>
 
 
-  <script>
-
-    const API_BASE = "/api";
-
-
-    const signupForm =
-      document.getElementById("signupForm");
-
-    const nameInput =
-      document.getElementById("name");
-
-    const phoneInput =
-      document.getElementById("phone");
-
-    const emailInput =
-      document.getElementById("email");
-
-    const passwordInput =
-      document.getElementById("password");
-
-    const confirmPasswordInput =
-      document.getElementById("confirmPassword");
-
-    const referralInput =
-      document.getElementById("referralCode");
-
-    const signupBtn =
-      document.getElementById("signupBtn");
-
-    const message =
-      document.getElementById("message");
-
-
-    /*
-     * If already logged in,
-     * go to the dashboard.
-     */
-
-    const existingToken =
-      localStorage.getItem("mamu_token");
-
-    if (existingToken) {
-
-      window.location.href =
-        "./index.html";
-
-    }
-
-
-    /*
-     * Show / hide password
-     */
-
-    document
-      .getElementById("togglePassword")
-      .addEventListener(
-        "click",
-        () => {
-
-          const isPassword =
-            passwordInput.type === "password";
-
-          passwordInput.type =
-            isPassword
-              ? "text"
-              : "password";
-
-          document
-            .getElementById("togglePassword")
-            .textContent =
-              isPassword
-                ? "🙈"
-                : "👁️";
-
-        }
-      );
-
-
-    /*
-     * Show / hide confirm password
-     */
-
-    document
-      .getElementById("toggleConfirmPassword")
-      .addEventListener(
-        "click",
-        () => {
-
-          const isPassword =
-            confirmPasswordInput.type === "password";
-
-          confirmPasswordInput.type =
-            isPassword
-              ? "text"
-              : "password";
-
-          document
-            .getElementById("toggleConfirmPassword")
-            .textContent =
-              isPassword
-                ? "🙈"
-                : "👁️";
-
-        }
-      );
-
-
-    /*
-     * Message helper
-     */
-
-    function showMessage(
-      text,
-      type = "error"
-    ) {
-
-      message.textContent = text;
-
-      message.className =
-        `message ${type}`;
-
-    }
-
-
-    /*
-     * Signup
-     */
-
-    signupForm.addEventListener(
-      "submit",
-      async (event) => {
-
-        event.preventDefault();
-
-
-        const name =
-          nameInput.value.trim();
-
-        const phone =
-          phoneInput.value.trim();
-
-        const email =
-          emailInput.value.trim();
-
-        const password =
-          passwordInput.value;
-
-        const confirmPassword =
-          confirmPasswordInput.value;
-
-        const referralCode =
-          referralInput.value.trim();
-
-
-        /*
-         * Basic validation
-         */
-
-        if (!name) {
-
-          showMessage(
-            "Please enter your full name."
-          );
-
-          nameInput.focus();
-
-          return;
-
-        }
-
-
-        if (!phone) {
-
-          showMessage(
-            "Please enter your phone number."
-          );
-
-          phoneInput.focus();
-
-          return;
-
-        }
-
-
-        if (password.length < 6) {
-
-          showMessage(
-            "Password must contain at least 6 characters."
-          );
-
-          passwordInput.focus();
-
-          return;
-
-        }
-
-
-        if (password !== confirmPassword) {
-
-          showMessage(
-            "Passwords do not match."
-          );
-
-          confirmPasswordInput.focus();
-
-          return;
-
-        }
-
-
-        /*
-         * Loading state
-         */
-
-        signupBtn.disabled = true;
-
-        signupBtn.innerHTML =
-          `<span class="spinner"></span>Creating account...`;
-
-        message.style.display = "none";
-
-
-        try {
-
-          /*
-           * Build request
-           */
-
-          const requestBody = {
-            name,
-            phone,
-            password
-          };
-
-
-          /*
-           * Email is optional.
-           */
-
-          if (email) {
-
-            requestBody.email =
-              email;
-
-          }
-
-
-          /*
-           * Referral code is optional.
-           */
-
-          if (referralCode) {
-
-            requestBody.referralCode =
-              referralCode.toUpperCase();
-
-          }
-
-
-          /*
-           * Send signup request
-           */
-
-          const response =
-            await fetch(
-              `${API_BASE}/auth/signup`,
-              {
-                method: "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json"
-                },
-
-                body:
-                  JSON.stringify(requestBody)
-              }
-            );
-
-
-          const data =
-            await response.json();
-
-
-          if (!response.ok || !data.success) {
-
-            throw new Error(
-              data.message ||
-              "Unable to create account."
-            );
-
-          }
-
-
-          /*
-           * Save JWT
-           */
-
-          if (data.token) {
-
-            localStorage.setItem(
-              "mamu_token",
-              data.token
-            );
-
-          }
-
-
-          /*
-           * Save returned user
-           */
-
-          if (data.user) {
-
-            localStorage.setItem(
-              "mamu_user",
-              JSON.stringify(data.user)
-            );
-
-          }
-
-
-          showMessage(
-            "Account created successfully. Opening your account...",
-            "success"
-          );
-
-
-          /*
-           * Go to dashboard
-           */
-
-          setTimeout(() => {
-
-            window.location.href =
-              "./index.html";
-
-          }, 600);
-
-
-        } catch (error) {
-
-          console.error(
-            "Signup error:",
-            error
-          );
-
-
-          showMessage(
-            error.message ||
-            "Unable to create account. Please try again."
-          );
-
-
-          signupBtn.disabled = false;
-
-          signupBtn.textContent =
-            "Create account";
-
-        }
-
-      }
-    );
-
-  </script>
+  <script src="./js/signup.js"></script>
 
 </body>
 </html>

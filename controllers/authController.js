@@ -31,6 +31,31 @@ const generateReferralCode = async () => {
   throw new Error("Could not generate unique referral code");
 };
 
+// Generate permanent username from full name
+const generateUsername = async (name) => {
+  const baseUsername = String(name)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 24);
+
+  let username = baseUsername || "user";
+  let counter = 1;
+
+  while (await User.findOne({ username })) {
+    counter += 1;
+
+    const suffix = String(counter);
+    const maxBaseLength = 30 - suffix.length;
+
+    username =
+      baseUsername.slice(0, maxBaseLength) + suffix;
+  }
+
+  return username;
+};
+
 // SIGNUP
 const signup = async (req, res) => {
   try {
@@ -98,7 +123,10 @@ const signup = async (req, res) => {
 
     const newReferralCode = await generateReferralCode();
 
+    const newUsername = await generateUsername(name);
+
     const user = await User.create({
+      username: newUsername,
       name,
       phone,
       email: email || undefined,
@@ -115,6 +143,7 @@ const signup = async (req, res) => {
       token,
       user: {
         id: user._id,
+        username: user.username,
         name: user.name,
         phone: user.phone,
         email: user.email,
@@ -182,6 +211,7 @@ const login = async (req, res) => {
       token,
       user: {
         id: user._id,
+        username: user.username || null,
         name: user.name,
         phone: user.phone,
         email: user.email,
@@ -201,7 +231,116 @@ const login = async (req, res) => {
   }
 };
 
+// SET TRANSACTION PIN
+const setTransactionPin = async (req, res) => {
+  try {
+    const { pin } = req.body;
+
+    if (!/^\d{4}$/.test(String(pin || ""))) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction PIN must be exactly 4 digits",
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (user.transactionPinHash) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction PIN already exists. Use reset PIN.",
+      });
+    }
+
+    user.transactionPinHash = await bcrypt.hash(String(pin), 12);
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Transaction PIN set successfully",
+    });
+  } catch (error) {
+    console.error("Set transaction PIN error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to set transaction PIN",
+    });
+  }
+};
+
+// RESET TRANSACTION PIN
+const resetTransactionPin = async (req, res) => {
+  try {
+    const { password, newPin } = req.body;
+
+    if (!password || !newPin) {
+      return res.status(400).json({
+        success: false,
+        message: "Login password and new PIN are required",
+      });
+    }
+
+    if (!/^\d{4}$/.test(String(newPin))) {
+      return res.status(400).json({
+        success: false,
+        message: "Transaction PIN must be exactly 4 digits",
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      password,
+      user.password
+    );
+
+    if (!passwordMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Incorrect login password",
+      });
+    }
+
+    user.transactionPinHash = await bcrypt.hash(
+      String(newPin),
+      12
+    );
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Transaction PIN changed successfully",
+    });
+  } catch (error) {
+    console.error("Reset transaction PIN error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Unable to reset transaction PIN",
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
+  setTransactionPin,
+  resetTransactionPin,
 };

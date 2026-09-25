@@ -53,11 +53,18 @@ transactionPinHash: {
     },
 
     city: {
-      type: String,
-      trim: true,
-    },
+  type: String,
+  trim: true,
+},
 
-    accountType: {
+profileLocationEditCount: {
+  type: Number,
+  default: 0,
+  min: 0,
+  max: 2,
+},
+
+accountType: {
       type: String,
       default: "Smart Earner",
       enum: ["Smart Earner"],

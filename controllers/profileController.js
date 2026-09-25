@@ -2,14 +2,7 @@ const User = require("../models/User");
 
 const updateProfile = async (req, res) => {
   try {
-    const {
-      username,
-      name,
-      email,
-      state,
-      city,
-      address,
-    } = req.body;
+    const { state, city, address } = req.body;
 
     const user = await User.findById(req.user._id);
 
@@ -20,69 +13,50 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    if (username !== undefined) {
-      const cleanUsername = String(username).trim().toLowerCase();
+    const currentEditCount =
+      user.profileLocationEditCount || 0;
 
-      if (!/^[a-z0-9_]{3,30}$/.test(cleanUsername)) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Username must be 3-30 characters and use only letters, numbers, or underscore",
-        });
-      }
-
-      const existingUsername = await User.findOne({
-        username: cleanUsername,
-        _id: { $ne: user._id },
+    if (currentEditCount >= 2) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "State, city and address can only be edited twice. Your profile location is now permanent.",
       });
-
-      if (existingUsername) {
-        return res.status(409).json({
-          success: false,
-          message: "Username already taken",
-        });
-      }
-
-      user.username = cleanUsername;
     }
 
-    if (name !== undefined) {
-      user.name = String(name).trim();
+    const newState =
+      state !== undefined
+        ? String(state).trim()
+        : String(user.state || "").trim();
+
+    const newCity =
+      city !== undefined
+        ? String(city).trim()
+        : String(user.city || "").trim();
+
+    const newAddress =
+      address !== undefined
+        ? String(address).trim()
+        : String(user.address || "").trim();
+
+    const locationChanged =
+      newState !== String(user.state || "").trim() ||
+      newCity !== String(user.city || "").trim() ||
+      newAddress !== String(user.address || "").trim();
+
+    if (!locationChanged) {
+      return res.status(400).json({
+        success: false,
+        message: "No changes were made to your profile location.",
+      });
     }
 
-    if (email !== undefined) {
-      const cleanEmail = String(email).trim().toLowerCase();
+    user.state = newState;
+    user.city = newCity;
+    user.address = newAddress;
 
-      if (cleanEmail) {
-        const existingEmail = await User.findOne({
-          email: cleanEmail,
-          _id: { $ne: user._id },
-        });
-
-        if (existingEmail) {
-          return res.status(409).json({
-            success: false,
-            message: "Email already registered",
-          });
-        }
-
-        user.email = cleanEmail;
-      } else {
-        user.email = undefined;
-      }
-    }
-
-    if (state !== undefined) {
-      user.state = String(state).trim();
-    }
-
-    if (city !== undefined) {
-      user.city = String(city).trim();
-    }
-
-    if (address !== undefined) {
-      user.address = String(address).trim();
-    }
+    user.profileLocationEditCount =
+      currentEditCount + 1;
 
     if (!user.accountType) {
       user.accountType = "Smart Earner";
@@ -90,9 +64,17 @@ const updateProfile = async (req, res) => {
 
     await user.save();
 
+    const remainingEdits = Math.max(
+      0,
+      2 - user.profileLocationEditCount
+    );
+
     res.json({
       success: true,
-      message: "Profile updated successfully",
+      message:
+        remainingEdits === 0
+          ? "Profile updated successfully. State, city and address are now permanent."
+          : "Profile updated successfully.",
       user: {
         id: user._id,
         username: user.username || null,
@@ -108,10 +90,17 @@ const updateProfile = async (req, res) => {
         accountStatus: user.accountStatus,
         referralCode: user.referralCode || null,
         referredBy: user.referredBy || null,
+        profileLocationEditCount:
+          user.profileLocationEditCount,
+        profileLocationEditsRemaining:
+          remainingEdits,
       },
     });
   } catch (error) {
-    console.error("Update profile error:", error.message);
+    console.error(
+      "Update profile error:",
+      error.message
+    );
 
     res.status(500).json({
       success: false,

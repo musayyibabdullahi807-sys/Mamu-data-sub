@@ -148,30 +148,37 @@ function checkAuthentication() {
    PAGE NAVIGATION
    ========================================================= */
 
-function showPage(pageName) {
+function showPage(page) {
+  if (!page) return;
+
   const pages = document.querySelectorAll(".page");
 
-  pages.forEach((page) => {
-    page.classList.remove("active");
+  pages.forEach((section) => {
+    section.classList.remove("active");
   });
 
-  const target = $(`${pageName}Page`);
+  const target = document.getElementById(`${page}Page`);
 
-  if (target) {
-    target.classList.add("active");
+  if (!target) {
+    console.warn(`Page not found: ${page}Page`);
+    return;
   }
 
-  document.querySelectorAll(".nav-item").forEach((item) => {
-    item.classList.remove("active");
+  target.classList.add("active");
 
-    if (item.dataset.page === pageName) {
-      item.classList.add("active");
+  document.querySelectorAll("[data-page]").forEach((element) => {
+    let buttonPage = element.dataset.page || "";
+
+    if (buttonPage.endsWith("Page")) {
+      buttonPage = buttonPage.slice(0, -4);
     }
+
+    element.classList.toggle("active", buttonPage === page);
   });
 
   window.scrollTo({
     top: 0,
-    behavior: "smooth",
+    behavior: "smooth"
   });
 }
 
@@ -184,29 +191,15 @@ function setupNavigation() {
         page = page.slice(0, -4);
       }
 
-      if (page) {
-        showPage(page);
+      if (!page) return;
 
-        if (page === "home") {
-          refreshHome();
-        }
+      showPage(page);
 
-        if (page === "data") {
-          loadDataPlans();
-        }
-
-        if (page === "transactions") {
-          loadTransactions();
-        }
-
-        if (page === "referral") {
-          loadReferral();
-        }
-
-        if (page === "profile") {
-          loadProfile();
-        }
-      }
+      if (page === "home") refreshHome();
+      if (page === "data") loadDataPlans();
+      if (page === "transactions") loadTransactions();
+      if (page === "referral") loadReferral();
+      if (page === "profile") loadProfile();
     });
   });
 
@@ -556,15 +549,41 @@ function renderPopularPlans() {
 }
 
 let selectedDataNetwork = "";
+function setupDataNetworkCards() {
+  const cards = document.querySelectorAll("[data-network]");
+
+  if (!cards.length) return;
+
+  cards.forEach((card) => {
+    card.addEventListener("click", () => {
+      const network = card.dataset.network || "";
+
+      selectedDataNetwork = network.toUpperCase();
+
+      cards.forEach((item) => {
+        item.classList.remove("selected");
+      });
+
+      card.classList.add("selected");
+
+      populateDataPlanSelect();
+    });
+  });
+}
 
 function populateDataPlanSelect() {
   const select = $("dataPlan");
+  const cardsContainer = $("dataPlanCards");
 
   if (!select) return;
 
   select.innerHTML = `
-    <option value="">Select data plan</option>
+    <option value="">Select a plan</option>
   `;
+
+  if (cardsContainer) {
+    cardsContainer.innerHTML = "";
+  }
 
   const filteredPlans = selectedDataNetwork
     ? allDataPlans.filter(
@@ -573,6 +592,17 @@ function populateDataPlanSelect() {
           selectedDataNetwork.toLowerCase()
       )
     : [];
+
+  if (!filteredPlans.length) {
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `
+        <div class="data-plan-empty">
+          Select a network to view available plans.
+        </div>
+      `;
+    }
+    return;
+  }
 
   filteredPlans.forEach((plan) => {
     const option = document.createElement("option");
@@ -585,24 +615,35 @@ function populateDataPlanSelect() {
       `${money(plan.sellingPrice)}`;
 
     select.appendChild(option);
-  });
-}
 
-function setupDataNetworkCards() {
-  const cards = document.querySelectorAll("[data-network]");
+    if (cardsContainer) {
+      const card = document.createElement("button");
 
-  cards.forEach((card) => {
-    card.addEventListener("click", () => {
-      selectedDataNetwork = card.dataset.network || "";
+      card.type = "button";
+      card.className = "data-plan-card";
+      card.dataset.planId = plan._id;
 
-      cards.forEach((item) => {
-        item.classList.remove("selected");
+      card.innerHTML = `
+        <span class="plan-check">✓</span>
+        <div class="plan-name">${plan.plan || "Data"}</div>
+        <div class="plan-validity">${plan.validity || "Data"}</div>
+        <div class="plan-price">${money(plan.sellingPrice)}</div>
+      `;
+
+      card.addEventListener("click", () => {
+        select.value = plan._id;
+
+        document
+          .querySelectorAll(".data-plan-card")
+          .forEach((item) => {
+            item.classList.remove("selected");
+          });
+
+        card.classList.add("selected");
       });
 
-      card.classList.add("selected");
-
-      populateDataPlanSelect();
-    });
+      cardsContainer.appendChild(card);
+    }
   });
 }
 
@@ -857,6 +898,159 @@ function setupTVPayment() {
 /* =========================================================
    PROFILE UPDATE
    ========================================================= */
+async function loadProfile() {
+  try {
+    const data = await apiRequest("/profile/me");
+
+    if (!data.user) {
+      throw new Error("Profile data not found.");
+    }
+
+    currentUser = data.user;
+
+updateProfileUI(currentUser);
+updateDashboardHeader();
+  } catch (error) {
+    console.error("Load profile error:", error);
+    showToast(
+      error.message || "Unable to load profile.",
+      "error"
+    );
+  }
+}
+
+function updateProfileUI(user) {
+  if (!user) return;
+
+  const username =
+    user.username || "User";
+
+  const name =
+    user.name || "";
+
+  const phone =
+    user.phone || "";
+
+  const email =
+    user.email || "";
+
+  const state =
+    user.state || "";
+
+  const city =
+    user.city || "";
+
+  const address =
+    user.address || "";
+
+  const accountType =
+    user.accountType || "Smart Earner";
+
+  const usernameInput =
+    $("profileUsernameInput");
+
+  const nameInput =
+    $("profileNameInput");
+
+  const phoneInput =
+    $("profilePhoneInput");
+
+  const emailInput =
+    $("profileEmailInput");
+
+  const stateInput =
+    $("profileStateInput");
+
+  const cityInput =
+    $("profileCityInput");
+
+  const addressInput =
+    $("profileAddressInput");
+
+  const accountTypeInput =
+    $("profileAccountTypeInput");
+
+  const profileName =
+    $("profileName");
+
+  const profileUsername =
+    $("profileUsername");
+
+  const profileAvatar =
+    $("profileAvatar");
+
+  if (usernameInput) {
+    usernameInput.value = username;
+    usernameInput.readOnly = true;
+  }
+
+  if (nameInput) {
+    nameInput.value = name;
+    nameInput.readOnly = true;
+  }
+
+  if (phoneInput) {
+    phoneInput.value = phone;
+    phoneInput.readOnly = true;
+  }
+
+  if (emailInput) {
+    emailInput.value = email;
+    emailInput.readOnly = true;
+  }
+
+  if (accountTypeInput) {
+    accountTypeInput.value = accountType;
+    accountTypeInput.readOnly = true;
+  }
+
+  if (stateInput) {
+    stateInput.value = state;
+  }
+
+  if (cityInput) {
+    cityInput.value = city;
+  }
+
+  if (addressInput) {
+    addressInput.value = address;
+  }
+
+  if (profileName) {
+    profileName.textContent = name || "User";
+  }
+
+  if (profileUsername) {
+    profileUsername.textContent = `@${username}`;
+  }
+
+  const editCount =
+    Number(user.profileLocationEditCount || 0);
+
+  const editsRemaining = Math.max(
+    0,
+    2 - editCount
+  );
+
+  const saveButton =
+    $("saveProfileBtn");
+
+  if (saveButton) {
+    saveButton.style.display =
+      editsRemaining > 0
+        ? "block"
+        : "none";
+  }
+
+  [stateInput, cityInput, addressInput].forEach(
+    (input) => {
+      if (!input) return;
+
+      input.readOnly =
+        editsRemaining <= 0;
+    }
+  );
+}
 
 function setupProfileUpdate() {
   const button = $("saveProfileBtn");
@@ -864,48 +1058,77 @@ function setupProfileUpdate() {
   if (!button) return;
 
   button.addEventListener("click", async () => {
-    const payload = {
-      username:
-        $("profileUsernameInput")?.value.trim() || "",
-      name:
-        $("profileNameInput")?.value.trim() || "",
-      email:
-        $("profileEmailInput")?.value.trim() || "",
-      state:
-        $("profileStateInput")?.value.trim() || "",
-      city:
-        $("profileCityInput")?.value.trim() || "",
-      address:
-        $("profileAddressInput")?.value.trim() || "",
-    };
+    const state =
+      $("profileStateInput")?.value.trim() || "";
 
-    if (!payload.name) {
-      showToast("Saka full name.", "error");
+    const city =
+      $("profileCityInput")?.value.trim() || "";
+
+    const address =
+      $("profileAddressInput")?.value.trim() || "";
+
+    const currentState =
+      currentUser?.state || "";
+
+    const currentCity =
+      currentUser?.city || "";
+
+    const currentAddress =
+      currentUser?.address || "";
+
+    if (
+      state === currentState &&
+      city === currentCity &&
+      address === currentAddress
+    ) {
+      showToast(
+        "No changes were made to your profile.",
+        "error"
+      );
       return;
     }
 
-    setButtonLoading(button, true, "Saving...");
+    setButtonLoading(
+      button,
+      true,
+      "Saving..."
+    );
 
     try {
       const data = await apiRequest("/profile/me", {
         method: "PUT",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          state,
+          city,
+          address,
+        }),
       });
 
       currentUser = data.user;
 
+      localStorage.setItem(
+        "mamu_user",
+        JSON.stringify(currentUser)
+      );
+
       updateProfileUI(currentUser);
 
       showToast(
-        data.message || "Profile updated successfully."
+        data.message ||
+          "Profile updated successfully.",
+        "success"
       );
     } catch (error) {
-      showToast(error.message, "error");
+      showToast(
+        error.message ||
+          "Unable to update profile.",
+        "error"
+      );
     } finally {
       setButtonLoading(
         button,
         false,
-        "Save Profile"
+        "Save Changes"
       );
     }
   });
@@ -1070,6 +1293,18 @@ function setButtonLoading(button, loading, text) {
 /* =========================================================
    QUICK BUTTONS
    ========================================================= */
+function setupSignOut() {
+  const signOut = () => {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("mamu_user");
+    currentUser = null;
+
+    window.location.href = "./login.html";
+  };
+
+  $("signOutBtn")?.addEventListener("click", signOut);
+  $("sideSignOutBtn")?.addEventListener("click", signOut);
+}
 
 function setupQuickButtons() {
   $("fundWalletBtn")?.addEventListener("click", () => {
@@ -1180,6 +1415,109 @@ async function refreshHome() {
 }
 
 /* =========================================================
+   TRANSACTION PIN SETUP
+   ========================================================= */
+
+function openTransactionPinModal() {
+  const modal = document.getElementById("transactionPinModal");
+  const form = document.getElementById("transactionPinForm");
+  const message = document.getElementById("transactionPinMessage");
+
+  if (!modal || !form) return;
+
+  form.reset();
+
+  if (message) {
+    message.textContent = "";
+    message.className = "";
+  }
+
+  modal.classList.add("active");
+}
+
+function closeTransactionPinModal() {
+  const modal = document.getElementById("transactionPinModal");
+
+  if (modal) {
+    modal.classList.remove("active");
+  }
+}
+
+async function checkTransactionPinSetup() {
+  try {
+    const data = await apiRequest("/profile/me");
+
+    if (data.user && data.user.hasTransactionPin === false) {
+      openTransactionPinModal();
+    }
+  } catch (error) {
+    console.error("Transaction PIN check error:", error);
+  }
+}
+
+function setupTransactionPin() {
+  const form = document.getElementById("transactionPinForm");
+  const pinInput = document.getElementById("transactionPin");
+  const confirmInput = document.getElementById("confirmTransactionPin");
+  const message = document.getElementById("transactionPinMessage");
+  const button = document.getElementById("saveTransactionPinBtn");
+
+  if (!form || !pinInput || !confirmInput || !message || !button) {
+    return;
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const pin = pinInput.value.trim();
+    const confirmPin = confirmInput.value.trim();
+
+    message.className = "";
+    message.textContent = "";
+
+    if (!/^\d{4}$/.test(pin)) {
+      message.textContent = "PIN must contain exactly 4 digits.";
+message.className = "show error";
+      return;
+    }
+
+    if (pin !== confirmPin) {
+      message.textContent = "PINs do not match.";
+message.className = "show error";
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "Saving...";
+
+    try {
+      const data = await apiRequest("/auth/transaction-pin", {
+        method: "POST",
+        body: JSON.stringify({
+          pin,
+          confirmPin,
+        }),
+      });
+
+      message.textContent =
+  data.message || "Transaction PIN saved successfully.";
+message.className = "show success";
+
+      setTimeout(() => {
+        closeTransactionPinModal();
+      }, 700);
+    } catch (error) {
+      message.textContent =
+        error.message || "Unable to save transaction PIN.";
+      message.className = "show";
+    } finally {
+      button.disabled = false;
+      button.textContent = "Save Transaction PIN";
+    }
+  });
+}
+
+/* =========================================================
    INITIALIZE
    ========================================================= */
 
@@ -1187,6 +1525,7 @@ async function initApp() {
   if (!checkAuthentication()) {
     return;
   }
+
 
   setupNavigation();
   setupBalanceToggle();
@@ -1199,13 +1538,23 @@ async function initApp() {
   setupTVPayment();
 
   setupProfileUpdate();
+  setupProfilePhoto();
   setupReferralCopy();
   setupFundWallet();
 
+loadProfile().catch((error) => {
+  console.error("Profile load error:", error);
+});
+
   setupQuickButtons();
   setupWhatsApp();
-
+  setupWhatsAppFloating();
+  setupSignOut();
     showPage("home");
+  setupTransactionPin();
+  setTimeout(() => {
+  checkTransactionPinSetup();
+}, 2000);
 
   refreshHome().catch((error) => {
     console.error("Home refresh error:", error);
@@ -1229,7 +1578,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 function setupSideMenu() {
   const menuBtn = $("menuBtn");
-  const menuClose = $("menuClose");
+  const menuClose = $("closeMenuBtn");
   const sideMenu = $("sideMenu");
   const menuOverlay = $("menuOverlay");
   const logoutBtn = $("logoutBtn");
@@ -1275,4 +1624,311 @@ logoutBtn?.addEventListener("click", () => {
       if (page === "profile") showPage("profile");
     });
   });
+}
+/* =========================================================
+   FLOATING WHATSAPP SUPPORT - DRAGGABLE
+   ========================================================= */
+
+function setupWhatsAppFloating() {
+  const button = document.getElementById("whatsappFloat");
+  if (!button) return;
+
+  let dragging = false;
+  let moved = false;
+  let startX = 0;
+  let startY = 0;
+  let startLeft = 0;
+  let startTop = 0;
+
+  button.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    moved = false;
+
+    startX = event.clientX;
+    startY = event.clientY;
+
+    const rect = button.getBoundingClientRect();
+
+    startLeft = rect.left;
+    startTop = rect.top;
+
+    button.style.left = `${startLeft}px`;
+    button.style.top = `${startTop}px`;
+    button.style.right = "auto";
+    button.style.bottom = "auto";
+
+    button.setPointerCapture(event.pointerId);
+    button.classList.add("dragging");
+  });
+
+  button.addEventListener("pointermove", (event) => {
+    if (!dragging) return;
+
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+      moved = true;
+    }
+
+    let left = startLeft + dx;
+    let top = startTop + dy;
+
+    const maxLeft = window.innerWidth - button.offsetWidth;
+    const maxTop = window.innerHeight - button.offsetHeight;
+
+    left = Math.max(0, Math.min(left, maxLeft));
+    top = Math.max(0, Math.min(top, maxTop));
+
+    button.style.left = `${left}px`;
+    button.style.top = `${top}px`;
+  });
+
+  button.addEventListener("pointerup", (event) => {
+    if (!dragging) return;
+
+    dragging = false;
+    button.classList.remove("dragging");
+
+    if (button.hasPointerCapture(event.pointerId)) {
+      button.releasePointerCapture(event.pointerId);
+    }
+  });
+
+  button.addEventListener("click", (event) => {
+    if (moved) {
+      event.preventDefault();
+      event.stopPropagation();
+      moved = false;
+    }
+  });
+}
+// ===============================
+// PROFILE PHOTO
+// ===============================
+
+function setupProfilePhoto() {
+  const uploadButton = $("uploadProfilePhotoBtn");
+  const photoInput = $("profilePhotoInput");
+  const cameraInput = $("profileCameraInput");
+  const profileAvatar = $("profileAvatar");
+  const dashboardProfileBtn = $("dashboardProfileBtn");
+
+  const modal = $("photoChoiceModal");
+  const takePhotoBtn = $("takePhotoBtn");
+  const chooseGalleryBtn = $("chooseGalleryBtn");
+  const cancelPhotoBtn = $("cancelPhotoBtn");
+
+  if (!photoInput || !cameraInput) return;
+
+  const openPhotoChoice = (event) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    modal?.classList.add("active");
+  };
+
+  const closePhotoChoice = () => {
+    modal?.classList.remove("active");
+  };
+
+  uploadButton?.addEventListener(
+    "click",
+    openPhotoChoice
+  );
+
+  profileAvatar?.addEventListener(
+    "click",
+    openPhotoChoice
+  );
+
+  dashboardProfileBtn?.addEventListener(
+    "click",
+    openPhotoChoice
+  );
+
+  takePhotoBtn?.addEventListener(
+    "click",
+    () => {
+      closePhotoChoice();
+      cameraInput.click();
+    }
+  );
+
+  chooseGalleryBtn?.addEventListener(
+    "click",
+    () => {
+      closePhotoChoice();
+      photoInput.click();
+    }
+  );
+
+  cancelPhotoBtn?.addEventListener(
+    "click",
+    closePhotoChoice
+  );
+
+  modal?.addEventListener(
+    "click",
+    (event) => {
+      if (event.target === modal) {
+        closePhotoChoice();
+      }
+    }
+  );
+
+  const handlePhoto = (file) => {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      showToast(
+        "Please select an image.",
+        "error"
+      );
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const photo = reader.result;
+
+      localStorage.setItem(
+        "mamu_profile_photo",
+        photo
+      );
+
+      updateProfilePhotoUI(photo);
+
+      showToast(
+        "Profile photo updated successfully.",
+        "success"
+      );
+
+      photoInput.value = "";
+      cameraInput.value = "";
+    };
+
+    reader.readAsDataURL(file);
+  };
+
+  photoInput.addEventListener(
+    "change",
+    () => {
+      handlePhoto(photoInput.files?.[0]);
+    }
+  );
+
+  cameraInput.addEventListener(
+    "change",
+    () => {
+      handlePhoto(cameraInput.files?.[0]);
+    }
+  );
+
+  updateProfilePhotoUI(
+    localStorage.getItem("mamu_profile_photo")
+  );
+}
+
+function updateProfilePhotoUI(photo) {
+  const profilePhoto = $("profilePhoto");
+  const profileInitial = $("profileInitial");
+
+  const dashboardPhoto =
+    $("dashboardProfilePhoto");
+
+  const dashboardInitial =
+    $("dashboardProfileInitial");
+
+  if (photo) {
+    if (profilePhoto) {
+      profilePhoto.src = photo;
+      profilePhoto.style.display = "block";
+    }
+
+const initial =
+  (currentUser?.name ||
+    currentUser?.username ||
+    "U")
+    .charAt(0)
+    .toUpperCase();
+
+if (profileInitial) {
+  profileInitial.textContent = initial;
+}
+    if (profileInitial) {
+      profileInitial.style.display = "none";
+    }
+
+    if (dashboardPhoto) {
+      dashboardPhoto.src = photo;
+      dashboardPhoto.style.display = "block";
+    }
+if (dashboardInitial) {
+  dashboardInitial.textContent = initial;
+}
+
+    if (dashboardInitial) {
+      dashboardInitial.style.display = "none";
+    }
+
+    return;
+  }
+
+  if (profilePhoto) {
+    profilePhoto.style.display = "none";
+  }
+
+  if (profileInitial) {
+    profileInitial.style.display = "block";
+  }
+
+  if (dashboardPhoto) {
+    dashboardPhoto.style.display = "none";
+  }
+
+  if (dashboardInitial) {
+    dashboardInitial.style.display = "block";
+  }
+}
+function updateDashboardHeader() {
+if (!currentUser) {
+  try {
+    currentUser =
+      JSON.parse(
+        localStorage.getItem("mamu_user")
+      );
+  } catch (error) {
+    currentUser = null;
+  }
+} 
+ const username =
+    currentUser?.username || "User";
+
+  const greeting =
+    $("headerGreeting");
+
+  const welcomeName =
+    $("welcomeName");
+
+  const accountType =
+    $("headerAccountType");
+
+  if (greeting) {
+    greeting.textContent = "Welcome back";
+  }
+
+  if (welcomeName) {
+    welcomeName.textContent = username;
+  }
+
+  if (accountType) {
+    accountType.textContent =
+      currentUser?.accountType || "Smart Earner";
+  }
+
+  updateProfilePhotoUI(
+    localStorage.getItem("mamu_profile_photo")
+  );
 }

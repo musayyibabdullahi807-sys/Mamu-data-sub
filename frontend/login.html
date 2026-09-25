@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
@@ -10,23 +9,13 @@
 
   <title>Login | MAMU DATA SUB</title>
 
-  <meta
-    name="description"
-    content="Login to your MAMU DATA SUB account"
-  >
-
   <style>
     :root {
-      --bg: #080c16;
-      --card: #121a2b;
-      --card-2: #0e1524;
-      --gold: #f5c542;
-      --gold-2: #e89b22;
-      --text: #ffffff;
-      --muted: #9aa6bb;
-      --border: rgba(255, 255, 255, 0.08);
-      --danger: #ff5c6c;
-      --success: #25d366;
+      --black: #000000;
+      --white: #ffffff;
+      --gray: #777777;
+      --light-gray: #eeeeee;
+      --border: #dddddd;
     }
 
     * {
@@ -50,159 +39,179 @@
         Arial,
         sans-serif;
 
-      background:
-        radial-gradient(
-          circle at top,
-          rgba(245, 197, 66, 0.10),
-          transparent 35%
-        ),
-        var(--bg);
-
-      color: var(--text);
       min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
+      background: var(--white);
+      color: var(--black);
     }
 
-    .login-wrapper {
-      width: 100%;
-      max-width: 430px;
+    .page {
+      min-height: 100vh;
+      overflow: hidden;
     }
 
-    /* LOGO */
+    /* BLACK HEADER */
 
-    .brand {
+    .top-section {
+      position: relative;
+      min-height: 330px;
+
+      background: var(--black);
+      color: var(--white);
+
+      padding: 48px 20px 115px;
+
       text-align: center;
-      margin-bottom: 28px;
+      overflow: hidden;
     }
+
+    /* CENTERED LOGO */
 
     .brand-logo {
-      width: 72px;
-      height: 72px;
-      margin: 0 auto 14px;
+      width: 76px;
+      height: 76px;
+
+      margin: 0 auto 17px;
 
       display: flex;
       align-items: center;
       justify-content: center;
 
+      border: 2px solid var(--white);
       border-radius: 22px;
 
-      background:
-        linear-gradient(
-          135deg,
-          var(--gold),
-          var(--gold-2)
-        );
+      background: var(--black);
+      color: var(--white);
 
-      color: #111;
-
-      font-size: 25px;
+      font-size: 30px;
       font-weight: 900;
-
-      box-shadow:
-        0 12px 35px rgba(245, 197, 66, 0.22);
     }
 
     .brand h1 {
       font-size: 25px;
       font-weight: 900;
-      letter-spacing: -0.5px;
-    }
-
-    .brand h1 span {
-      color: var(--gold);
+      letter-spacing: -0.7px;
     }
 
     .brand p {
-      margin-top: 7px;
-      color: var(--muted);
-      font-size: 14px;
+      margin-top: 8px;
+
+      color: #aaaaaa;
+
+      font-size: 13px;
     }
 
-    /* CARD */
+    /* CURVED WAVE */
+
+    .wave {
+      position: absolute;
+
+      left: 0;
+      bottom: -1px;
+
+      width: 100%;
+      height: 105px;
+
+      display: block;
+    }
+
+    /* LOGIN AREA */
+
+    .login-area {
+      position: relative;
+      z-index: 5;
+
+      width: 100%;
+      max-width: 430px;
+
+      margin: -55px auto 0;
+
+      padding: 0 18px 30px;
+    }
 
     .login-card {
-      background:
-        linear-gradient(
-          145deg,
-          rgba(255,255,255,0.035),
-          rgba(255,255,255,0.015)
-        ),
-        var(--card);
+      background: var(--white);
 
-      border: 1px solid var(--border);
+      border-radius: 26px;
 
-      border-radius: 24px;
+      padding: 28px 21px 24px;
 
-      padding: 25px 20px;
+      border: 1px solid #f0f0f0;
 
       box-shadow:
-        0 25px 70px rgba(0, 0, 0, 0.35);
+        0 15px 45px rgba(0, 0, 0, 0.12);
     }
 
     .login-card h2 {
-      font-size: 22px;
+      font-size: 23px;
+      font-weight: 900;
+
       margin-bottom: 7px;
     }
 
-    .login-card .subtitle {
-      color: var(--muted);
+    .subtitle {
+      color: var(--gray);
+
       font-size: 14px;
-      margin-bottom: 24px;
+      line-height: 1.5;
+
+      margin-bottom: 25px;
+    }
+
+    /* MESSAGE */
+
+    .message {
+      display: none;
+
+      padding: 12px 13px;
+      margin-bottom: 17px;
+
+      border-radius: 12px;
+
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.error,
+    .message.success {
+      color: var(--black);
+      background: #f3f3f3;
+      border: 1px solid #d8d8d8;
     }
 
     /* FORM */
 
     .form-group {
-      margin-bottom: 17px;
+      margin-bottom: 18px;
     }
 
     .form-group label {
       display: block;
-      margin-bottom: 8px;
 
       font-size: 13px;
-      font-weight: 700;
+      font-weight: 800;
 
-      color: #dce3ef;
+      margin-bottom: 8px;
     }
 
     .input-wrapper {
       position: relative;
     }
 
-    .input-wrapper .icon {
-      position: absolute;
-
-      left: 15px;
-      top: 50%;
-
-      transform: translateY(-50%);
-
-      font-size: 17px;
-
-      opacity: 0.75;
-
-      pointer-events: none;
-    }
-
     .input-wrapper input {
       width: 100%;
+      height: 53px;
 
-      height: 52px;
-
-      padding:
-        0 48px 0 45px;
-
-      border-radius: 14px;
+      padding: 0 15px;
 
       border: 1px solid var(--border);
+      border-radius: 14px;
 
-      background: var(--card-2);
-
-      color: var(--text);
+      background: #fafafa;
+      color: var(--black);
 
       outline: none;
 
@@ -214,67 +223,117 @@
         background 0.2s;
     }
 
-    .input-wrapper input::placeholder {
-      color: #68748a;
-    }
-
     .input-wrapper input:focus {
-      border-color: rgba(245, 197, 66, 0.7);
+      background: var(--white);
+
+      border-color: var(--black);
 
       box-shadow:
-        0 0 0 3px rgba(245, 197, 66, 0.09);
+        0 0 0 3px rgba(0, 0, 0, 0.08);
+    }
 
-      background: #111a2b;
+    .input-wrapper input::placeholder {
+      color: #999999;
+    }
+
+    /* PASSWORD */
+
+    .password-wrapper input {
+      padding-right: 65px;
     }
 
     .password-toggle {
       position: absolute;
 
-      right: 13px;
+      right: 8px;
       top: 50%;
 
       transform: translateY(-50%);
 
+      width: 48px;
+      height: 40px;
+
       border: 0;
       background: transparent;
 
-      color: var(--muted);
-
-      font-size: 18px;
+      color: var(--black);
 
       cursor: pointer;
 
-      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* BUTTON */
+    /* EYE ICON */
+
+    .eye {
+      position: relative;
+
+      width: 22px;
+      height: 14px;
+
+      border: 2px solid var(--black);
+
+      border-radius: 80% 20%;
+
+      transform: rotate(45deg);
+    }
+
+    .eye::after {
+      content: "";
+
+      position: absolute;
+
+      width: 5px;
+      height: 5px;
+
+      left: 50%;
+      top: 50%;
+
+      transform: translate(-50%, -50%);
+
+      background: var(--black);
+
+      border-radius: 50%;
+    }
+
+    .eye.off::before {
+      content: "";
+
+      position: absolute;
+
+      width: 27px;
+      height: 2px;
+
+      left: -5px;
+      top: 5px;
+
+      background: var(--black);
+
+      transform: rotate(-45deg);
+
+      z-index: 3;
+    }
+
+    /* LOGIN BUTTON */
 
     .login-btn {
       width: 100%;
+      height: 54px;
 
-      height: 53px;
-
-      margin-top: 7px;
+      margin-top: 6px;
 
       border: 0;
-      border-radius: 15px;
+      border-radius: 14px;
 
-      background:
-        linear-gradient(
-          135deg,
-          var(--gold),
-          var(--gold-2)
-        );
-
-      color: #111;
+      background: var(--black);
+      color: var(--white);
 
       font-size: 15px;
       font-weight: 900;
 
       cursor: pointer;
-
-      box-shadow:
-        0 12px 30px rgba(245, 197, 66, 0.16);
 
       transition:
         transform 0.15s,
@@ -286,64 +345,35 @@
     }
 
     .login-btn:disabled {
-      opacity: 0.6;
+      opacity: 0.55;
       cursor: not-allowed;
-    }
-
-    /* MESSAGE */
-
-    .message {
-      display: none;
-
-      margin-bottom: 17px;
-
-      padding: 12px 13px;
-
-      border-radius: 12px;
-
-      font-size: 13px;
-      line-height: 1.45;
-    }
-
-    .message.error {
-      display: block;
-
-      color: #ffb5bd;
-
-      background: rgba(255, 92, 108, 0.09);
-
-      border: 1px solid rgba(255, 92, 108, 0.2);
-    }
-
-    .message.success {
-      display: block;
-
-      color: #a8f5c8;
-
-      background: rgba(37, 211, 102, 0.08);
-
-      border: 1px solid rgba(37, 211, 102, 0.18);
     }
 
     /* DIVIDER */
 
     .divider {
       display: flex;
+
       align-items: center;
+
       gap: 12px;
 
-      margin: 24px 0;
+      margin: 25px 0 21px;
     }
 
     .divider span {
       flex: 1;
+
       height: 1px;
-      background: var(--border);
+
+      background: var(--light-gray);
     }
 
     .divider p {
-      color: #68748a;
-      font-size: 12px;
+      color: var(--gray);
+
+      font-size: 11px;
+      font-weight: 800;
     }
 
     /* SIGNUP */
@@ -351,20 +381,16 @@
     .signup-text {
       text-align: center;
 
-      color: var(--muted);
+      color: var(--gray);
 
       font-size: 14px;
     }
 
     .signup-text a {
-      color: var(--gold);
+      color: var(--black);
 
-      text-decoration: none;
+      font-weight: 900;
 
-      font-weight: 800;
-    }
-
-    .signup-text a:hover {
       text-decoration: underline;
     }
 
@@ -373,61 +399,36 @@
     .footer {
       text-align: center;
 
-      margin-top: 20px;
-
-      color: #58657a;
+      color: #999999;
 
       font-size: 11px;
+
+      padding: 0 0 25px;
     }
 
-    /* LOADING */
-
-    .spinner {
-      width: 18px;
-      height: 18px;
-
-      display: inline-block;
-
-      border: 2px solid rgba(17,17,17,0.3);
-      border-top-color: #111;
-
-      border-radius: 50%;
-
-      animation: spin 0.7s linear infinite;
-
-      vertical-align: middle;
-
-      margin-right: 7px;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* SMALL SCREEN */
+    /* MOBILE */
 
     @media (max-width: 360px) {
-      body {
-        padding: 14px;
-      }
-
-      .login-card {
-        padding: 21px 16px;
-      }
-
-      .brand {
-        margin-bottom: 22px;
+      .top-section {
+        min-height: 305px;
+        padding-top: 40px;
       }
 
       .brand-logo {
-        width: 64px;
-        height: 64px;
+        width: 66px;
+        height: 66px;
       }
 
       .brand h1 {
         font-size: 22px;
+      }
+
+      .login-area {
+        margin-top: -48px;
+      }
+
+      .login-card {
+        padding: 23px 17px 20px;
       }
     }
   </style>
@@ -435,154 +436,260 @@
 
 <body>
 
-  <main class="login-wrapper">
+  <main class="page">
 
-    <!-- BRAND -->
-    <div class="brand">
+    <section class="top-section">
 
       <div class="brand-logo">
         M
       </div>
 
-      <h1>
-        MAMU <span>DATA SUB</span>
-      </h1>
+      <div class="brand">
+        <h1>MAMU DATA SUB</h1>
 
-      <p>
-        Smart data, airtime & bills
-      </p>
-
-    </div>
-
-
-    <!-- LOGIN CARD -->
-    <section class="login-card">
-
-      <h2>
-        Welcome back 👋
-      </h2>
-
-      <p class="subtitle">
-        Login to continue to your account.
-      </p>
-
-
-      <!-- MESSAGE -->
-      <div
-        id="message"
-        class="message"
-      ></div>
-
-
-      <!-- LOGIN FORM -->
-      <form id="loginForm">
-
-        <!-- PHONE -->
-        <div class="form-group">
-
-          <label for="phone">
-            Phone number
-          </label>
-
-          <div class="input-wrapper">
-
-            <span class="icon">
-              📱
-            </span>
-
-            <input
-              type="tel"
-              id="phone"
-              name="phone"
-              placeholder="Enter your phone number"
-              autocomplete="tel"
-              inputmode="numeric"
-              required
-            >
-
-          </div>
-
-        </div>
-
-
-        <!-- PASSWORD -->
-        <div class="form-group">
-
-          <label for="password">
-            Password
-          </label>
-
-          <div class="input-wrapper">
-
-            <span class="icon">
-              🔒
-            </span>
-
-            <input
-              type="password"
-              id="password"
-              name="password"
-              placeholder="Enter your password"
-              autocomplete="current-password"
-              required
-            >
-
-            <button
-              type="button"
-              class="password-toggle"
-              id="togglePassword"
-              aria-label="Show password"
-            >
-              👁️
-            </button>
-
-          </div>
-
-        </div>
-
-
-        <!-- LOGIN BUTTON -->
-        <button
-          type="submit"
-          class="login-btn"
-          id="loginBtn"
-        >
-          Login
-        </button>
-
-      </form>
-
-
-      <!-- DIVIDER -->
-      <div class="divider">
-        <span></span>
-        <p>OR</p>
-        <span></span>
+        <p>
+          Smart data, airtime & bills
+        </p>
       </div>
 
-
-      <!-- SIGNUP -->
-      <p class="signup-text">
-
-        Don't have an account?
-
-        <a href="./signup.html">
-          Create account
-        </a>
-
-      </p>
+      <svg
+        class="wave"
+        viewBox="0 0 1440 160"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M0,70 C260,155 430,155 720,80 C1010,5 1180,5 1440,70 L1440,160 L0,160 Z"
+          fill="#ffffff"
+        />
+      </svg>
 
     </section>
 
 
-    <!-- FOOTER -->
-    <div class="footer">
-      © 2026 MAMU DATA SUB
-    </div>
+    <section class="login-area">
+
+      <div class="login-card">
+
+        <h2>Welcome back</h2>
+
+        <p class="subtitle">
+          Login to continue to your account.
+        </p>
+
+
+        <div
+          id="message"
+          class="message"
+        ></div>
+
+
+        <form id="loginForm">
+
+          <div class="form-group">
+
+            <label for="phone">
+              Phone number
+            </label>
+
+            <div class="input-wrapper">
+
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                placeholder="Enter your phone number"
+                autocomplete="tel"
+                inputmode="numeric"
+                required
+              >
+
+            </div>
+
+          </div>
+
+
+          <div class="form-group">
+
+            <label for="password">
+              Password
+            </label>
+
+            <div class="input-wrapper password-wrapper">
+
+              <input
+                type="password"
+                id="password"
+                name="password"
+                placeholder="Enter your password"
+                autocomplete="current-password"
+                required
+              >
+
+              <button
+                type="button"
+                class="password-toggle"
+                id="togglePassword"
+                aria-label="Show password"
+              >
+                <span
+                  class="eye off"
+                  id="passwordEye"
+                ></span>
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <button
+            type="submit"
+            class="login-btn"
+            id="loginBtn"
+          >
+            Login
+          </button>
+
+        </form>
+
+
+        <div class="divider">
+
+          <span></span>
+
+          <p>OR</p>
+
+          <span></span>
+
+        </div>
+
+
+        <p class="signup-text">
+
+          Don't have an account?
+
+          <a href="./signup.html">
+            Create account
+          </a>
+
+        </p>
+
+      </div>
+
+
+      <div class="footer">
+        © 2026 MAMU DATA SUB
+      </div>
+
+    </section>
 
   </main>
 
-<script src="./js/login.js"></script>  
+
+  <script src="./js/login.js"></script>
+
+  <script>
+    const passwordInput =
+      document.getElementById("password");
+
+    const togglePassword =
+      document.getElementById("togglePassword");
+
+    const passwordEye =
+      document.getElementById("passwordEye");
+
+    if (
+      togglePassword &&
+      passwordInput &&
+      passwordEye
+    ) {
+      togglePassword.addEventListener(
+        "click",
+        () => {
+
+          const isHidden =
+            passwordInput.type === "password";
+
+          passwordInput.type =
+            isHidden ? "text" : "password";
+
+          passwordEye.classList.toggle(
+            "off",
+            !isHidden
+          );
+
+          togglePassword.setAttribute(
+            "aria-label",
+            isHidden
+              ? "Hide password"
+              : "Show password"
+          );
+
+        }
+      );
+    }
+  </script>
+<!-- FLOATING WHATSAPP SUPPORT -->
+<a
+  href="https://wa.me/2349167765910?text=Hello%20MAMU%20DATA%20SUB%20Support,%20I%20need%20help%20with%20my%20account."
+  class="whatsapp-support"
+  target="_blank"
+  rel="noopener noreferrer"
+  aria-label="Contact WhatsApp Support"
+>
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M20.5 3.5A11.8 11.8 0 0 0 12.1 0C5.6 0 .3 5.3.3 11.8c0 2.1.5 4.1 1.6 5.9L.2 24l6.5-1.7a11.8 11.8 0 0 0 5.4 1.3h.1c6.5 0 11.8-5.3 11.8-11.8 0-3.2-1.2-6.1-3.5-8.3Z"
+      fill="currentColor"
+    />
+    <path
+      d="M17.4 14.2c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-.9 1.2-.2.2-.3.2-.6.1-1.6-.8-2.7-1.4-3.8-3.2-.3-.5.3-.5.8-1.7.1-.3 0-.5-.1-.7-.1-.2-.7-1.7-.9-2.3-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.1 1.1-1.1 2.6s1.1 3 1.3 3.2c.2.2 2.2 3.4 5.3 4.8 2 .9 2.8 1 3.8.8.6-.1 1.8-.7 2.1-1.4.3-.7.3-1.3.2-1.4-.1-.2-.3-.3-.6-.4Z"
+      fill="#ffffff"
+    />
+  </svg>
+</a>
+
+<style>
+  .whatsapp-support {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+
+    width: 58px;
+    height: 58px;
+
+    border-radius: 50%;
+
+    background: #25D366;
+    color: #ffffff;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text-decoration: none;
+
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+
+    z-index: 9999;
+
+    transition: transform 0.2s ease;
+  }
+
+  .whatsapp-support:hover {
+    transform: scale(1.08);
+  }
+
+  .whatsapp-support:active {
+    transform: scale(0.94);
+  }
+
+  .whatsapp-support svg {
+    width: 31px;
+    height: 31px;
+  }
+</style>
 
 </body>
 </html>
