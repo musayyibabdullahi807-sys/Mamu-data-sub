@@ -25,12 +25,21 @@ const initializePayment = async (req, res) => {
     }
 
     const finalAmount = Math.round(numericAmount * 100);
+const forwardedProto = req.get("x-forwarded-proto");
+const forwardedHost = req.get("x-forwarded-host");
+
+const protocol = (forwardedProto || req.protocol).split(",")[0].trim();
+const host = (forwardedHost || req.get("host")).split(",")[0].trim();
+
+const appUrl = process.env.APP_URL || `${protocol}://${host}`;
+const callbackUrl = `${appUrl}/?payment=callback`;
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email: req.user.email,
-        amount: finalAmount,
+amount: finalAmount,
+callback_url: callbackUrl,
       },
       {
         headers: {
@@ -204,23 +213,40 @@ const verifyPayment = async (req, res) => {
     }
 
     if (payment.status !== "success") {
-      if (transaction.status === "pending") {
-        transaction.status = "failed";
+  const failedStatuses = [
+    "failed",
+    "abandoned",
+    "reversed",
+  ];
 
-        transaction.metadata = {
-          ...transaction.metadata,
-          paystackStatus: payment.status,
-        };
+  if (
+    failedStatuses.includes(payment.status) &&
+    transaction.status === "pending"
+  ) {
+    transaction.status = "failed";
 
-        await transaction.save();
-      }
+    transaction.metadata = {
+      ...transaction.metadata,
+      paystackStatus: payment.status,
+    };
 
-      return res.status(400).json({
-        success: false,
-        message: "Payment was not successful",
-        paymentStatus: payment.status,
-      });
-    }
+    await transaction.save();
+  }
+
+  if (failedStatuses.includes(payment.status)) {
+    return res.status(400).json({
+      success: false,
+      message: "Payment failed",
+      paymentStatus: payment.status,
+    });
+  }
+
+  return res.status(202).json({
+    success: false,
+    message: "Payment is still being processed",
+    paymentStatus: payment.status,
+  });
+}
 
     const result = await processSuccessfulPayment(payment);
 

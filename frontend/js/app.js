@@ -103,17 +103,27 @@ async function apiRequest(endpoint, options = {}) {
   }
 
   if (response.status === 401) {
-    localStorage.removeItem(TOKEN_KEY);
-    currentUser = null;
+  const authMessage =
+    data.message || "Your session has expired. Please log in again.";
 
-    showToast("Session ɗinka ya ƙare. Ka sake login.", "error");
+  if (
+  authMessage === "Incorrect transaction PIN" ||
+  authMessage === "Incorrect account password."
+) {
+  throw new Error(authMessage);
+}
 
-    setTimeout(() => {
-      window.location.href = "./login.html";
-    }, 900);
+  localStorage.removeItem(TOKEN_KEY);
+  currentUser = null;
 
-    throw new Error("Unauthorized");
-  }
+  showToast(authMessage, "error");
+
+  setTimeout(() => {
+    window.location.href = "./login.html";
+  }, 900);
+
+  throw new Error(authMessage);
+}
 
   if (!response.ok || data.success === false) {
     throw new Error(
@@ -715,13 +725,35 @@ function setupAirtimePurchase() {
 
   if (!button) return;
 
+  let selectedNetwork = "";
+
+  document.querySelectorAll("[data-airtime-network]").forEach((card) => {
+    card.addEventListener("click", () => {
+      selectedNetwork = card.dataset.airtimeNetwork || "";
+
+      document
+        .querySelectorAll("[data-airtime-network]")
+        .forEach((item) => item.classList.remove("selected"));
+
+      card.classList.add("selected");
+    });
+  });
+
   button.addEventListener("click", async () => {
-    const network = $("airtimeNetwork")?.value;
     const phone = $("airtimePhone")?.value.trim();
     const amount = Number($("airtimeAmount")?.value);
+    const pin = $("airtimePin")?.value.trim();
 
-    if (!network || !phone || !amount) {
-      showToast("Please complete all airtime fields.", "error");
+    if (!selectedNetwork || !phone || !amount || !pin) {
+      showToast(
+        "Please select a network and complete all airtime fields.",
+        "error"
+      );
+      return;
+    }
+
+    if (!/^\d{4}$/.test(pin)) {
+      showToast("Transaction PIN must be exactly 4 digits.", "error");
       return;
     }
 
@@ -731,7 +763,10 @@ function setupAirtimePurchase() {
     }
 
     if (amount < 100 || amount > 50000) {
-      showToast("Airtime amount must be between ₦100 and ₦50,000.", "error");
+      showToast(
+        "Airtime amount must be between ₦100 and ₦50,000.",
+        "error"
+      );
       return;
     }
 
@@ -741,9 +776,10 @@ function setupAirtimePurchase() {
       const data = await apiRequest("/airtime/purchase", {
         method: "POST",
         body: JSON.stringify({
-          serviceID: String(network).toLowerCase(),
+          serviceID: selectedNetwork,
           phone,
           amount,
+          pin,
         }),
       });
 
@@ -754,15 +790,28 @@ function setupAirtimePurchase() {
 
       $("airtimePhone").value = "";
       $("airtimeAmount").value = "";
+      $("airtimePin").value = "";
+
+      selectedNetwork = "";
+
+      document
+        .querySelectorAll("[data-airtime-network]")
+        .forEach((item) => item.classList.remove("selected"));
 
       await refreshHome();
+      await loadTransactions();
+
     } catch (error) {
-      showToast(error.message || "Airtime purchase failed.", "error");
+      showToast(
+        error.message || "Airtime purchase failed.",
+        "error"
+      );
     } finally {
       setButtonLoading(button, false);
     }
   });
 }
+
 /* =========================================================
    ELECTRICITY
    ========================================================= */
@@ -1492,12 +1541,11 @@ message.className = "show error";
 
     try {
       const data = await apiRequest("/auth/transaction-pin", {
-        method: "POST",
-        body: JSON.stringify({
-          pin,
-          confirmPin,
-        }),
-      });
+  method: "POST",
+  body: JSON.stringify({
+    pin,
+  }),
+});
 
       message.textContent =
   data.message || "Transaction PIN saved successfully.";
@@ -1540,8 +1588,49 @@ async function initApp() {
   setupProfileUpdate();
   setupProfilePhoto();
   setupReferralCopy();
-  setupFundWallet();
+ 
+async function handlePaystackCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const reference =
+  params.get("reference") ||
+  params.get("trxref");
 
+if (!reference) {
+  return;
+}
+
+  showToast("Verifying your payment...", "success");
+
+  try {
+    const result = await apiRequest(
+      `/payment/verify/${encodeURIComponent(reference)}`
+    );
+
+    if (result.success) {
+      showToast(
+        `Wallet funded successfully: ₦${Number(result.amount || 0).toLocaleString()}`,
+        "success"
+      );
+
+      await loadProfile();
+
+      window.history.replaceState(
+        {},
+        document.title,
+        window.location.pathname
+      );
+    }
+  } catch (error) {
+    console.error("Paystack verification error:", error);
+    showToast(
+      error.message || "Unable to verify payment.",
+      "error"
+    );
+  }
+} setupFundWallet();
+handlePaystackCallback().catch((error) => {
+  console.error("Paystack callback error:", error);
+});
 loadProfile().catch((error) => {
   console.error("Profile load error:", error);
 });
@@ -1552,6 +1641,7 @@ loadProfile().catch((error) => {
   setupSignOut();
     showPage("home");
   setupTransactionPin();
+  setupTransactionPinReset();  
   setTimeout(() => {
   checkTransactionPinSetup();
 }, 2000);
@@ -1931,4 +2021,73 @@ if (!currentUser) {
   updateProfilePhotoUI(
     localStorage.getItem("mamu_profile_photo")
   );
+}
+function setupTransactionPinReset() {
+  const openButton = $("resetTransactionPinBtn");
+  const modal = $("resetTransactionPinModal");
+  const cancelButton = $("cancelResetTransactionPinBtn");
+  const saveButton = $("saveResetTransactionPinBtn");
+
+  if (!openButton || !modal || !cancelButton || !saveButton) return;
+
+  openButton.addEventListener("click", () => {
+    modal.classList.add("active");
+
+    $("resetPinPassword").value = "";
+    $("newTransactionPin").value = "";
+    $("confirmNewTransactionPin").value = "";
+    $("resetTransactionPinMessage").textContent = "";
+  });
+
+  cancelButton.addEventListener("click", () => {
+    modal.classList.remove("active");
+  });
+
+  saveButton.addEventListener("click", async () => {
+    const password = $("resetPinPassword").value.trim();
+    const newPin = $("newTransactionPin").value.trim();
+    const confirmPin = $("confirmNewTransactionPin").value.trim();
+
+    if (!password || !newPin || !confirmPin) {
+      showToast("Please complete all fields.", "error");
+      return;
+    }
+
+    if (!/^\d{4}$/.test(newPin)) {
+      showToast("Transaction PIN must be exactly 4 digits.", "error");
+      return;
+    }
+
+    if (newPin !== confirmPin) {
+      showToast("The new PINs do not match.", "error");
+      return;
+    }
+
+    try {
+      setButtonLoading(saveButton, true);
+
+      const data = await apiRequest("/security/transaction-pin/reset", {
+        method: "POST",
+        body: JSON.stringify({
+          accountPassword: password,
+          newPin,
+          confirmPin,
+        }),
+      });
+
+      showToast(
+        data.message || "Transaction PIN reset successfully.",
+        "success"
+      );
+
+      modal.classList.remove("active");
+    } catch (error) {
+      showToast(
+        error.message || "Failed to reset transaction PIN.",
+        "error"
+      );
+    } finally {
+      setButtonLoading(saveButton, false);
+    }
+  });
 }

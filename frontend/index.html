@@ -890,6 +890,9 @@
         <button id="saveProfileBtn" class="primary-btn full-btn" type="button">
           Save Changes
         </button>
+<button id="resetTransactionPinBtn" class="secondary-btn full-btn" type="button">
+  Reset Transaction PIN
+</button>
 
       </div>
 
@@ -903,6 +906,65 @@
 
 </div>
 
+<!-- RESET TRANSACTION PIN MODAL -->
+<div id="resetTransactionPinModal" class="modal-overlay">
+  <div class="modal-box">
+    <h2>Reset Transaction PIN</h2>
+    <p>Enter your login password and choose a new 4-digit PIN.</p>
+
+    <div class="form-group">
+      <label for="resetPinPassword">Login Password</label>
+      <input
+        id="resetPinPassword"
+        type="password"
+        placeholder="Enter your password"
+        autocomplete="current-password"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="newTransactionPin">New Transaction PIN</label>
+      <input
+        id="newTransactionPin"
+        type="password"
+        inputmode="numeric"
+        maxlength="4"
+        placeholder="Enter 4-digit PIN"
+        autocomplete="off"
+      >
+    </div>
+
+    <div class="form-group">
+      <label for="confirmNewTransactionPin">Confirm New PIN</label>
+      <input
+        id="confirmNewTransactionPin"
+        type="password"
+        inputmode="numeric"
+        maxlength="4"
+        placeholder="Confirm 4-digit PIN"
+        autocomplete="off"
+      >
+    </div>
+
+    <p id="resetTransactionPinMessage"></p>
+
+    <button
+      type="button"
+      id="saveResetTransactionPinBtn"
+      class="primary-btn full-btn"
+    >
+      Reset Transaction PIN
+    </button>
+
+    <button
+      type="button"
+      id="cancelResetTransactionPinBtn"
+      class="danger-btn full-btn"
+    >
+      Cancel
+    </button>
+  </div>
+</div>
 
 <!-- SIDE MENU -->
 <aside class="side-menu" id="sideMenu">
