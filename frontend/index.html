@@ -127,22 +127,34 @@
             <small>Buy airtime</small>
           </button>
 
+          <button class="service-card" data-page="electricityPage" type="button">
+            <span class="service-icon">BILL</span>
+            <strong>Electricity</strong>
+            <small>Pay electricity</small>
+          </button>
+
           <button class="service-card" data-page="tvPage" type="button">
             <span class="service-icon">TV</span>
-            <strong>Cable TV</strong>
+            <strong>TV</strong>
             <small>Pay subscription</small>
           </button>
 
-          <button class="service-card" data-page="electricityPage" type="button">
-            <span class="service-icon">BILL</span>
-            <strong>Bill Payment</strong>
-            <small>Pay electricity</small>
+          <button class="service-card" type="button" data-service="travel">
+            <span class="service-icon">TRIP</span>
+            <strong>Travel</strong>
+            <small>Coming Soon</small>
           </button>
 
           <button class="service-card" data-page="educationPage" type="button">
             <span class="service-icon">EDU</span>
-            <strong>Exam Pin</strong>
-            <small>Education services</small>
+            <strong>Education</strong>
+            <small>Exam services</small>
+          </button>
+
+          <button class="service-card" type="button" data-service="recharge-pin">
+            <span class="service-icon">PIN</span>
+            <strong>Recharge PIN</strong>
+            <small>Coming Soon</small>
           </button>
 
           <button class="service-card" type="button" data-service="bulk-sms">
@@ -151,16 +163,34 @@
             <small>Coming Soon</small>
           </button>
 
-          <button class="service-card" type="button" data-service="recharge-pin">
-            <span class="service-icon">PIN</span>
-            <strong>Recharge Pin</strong>
+          <button class="service-card" type="button" data-service="esim">
+            <span class="service-icon">SIM</span>
+            <strong>eSIM</strong>
             <small>Coming Soon</small>
           </button>
 
-          <button class="service-card" type="button" data-service="airtime-data">
-            <span class="service-icon">VTU</span>
-            <strong>VTU Services</strong>
+          <button class="service-card" type="button" data-service="social-media">
+            <span class="service-icon">SOC</span>
+            <strong>Social Media</strong>
             <small>Coming Soon</small>
+          </button>
+
+          <button class="service-card" type="button" data-service="premium-apps">
+            <span class="service-icon">APP</span>
+            <strong>Premium Apps</strong>
+            <small>Coming Soon</small>
+          </button>
+
+          <button class="service-card" type="button" data-service="games">
+            <span class="service-icon">GAME</span>
+            <strong>Games</strong>
+            <small>Coming Soon</small>
+          </button>
+
+          <button class="service-card" data-page="referralPage" type="button">
+            <span class="service-icon">EARN</span>
+            <strong>Share &amp; Earn</strong>
+            <small>Earn rewards</small>
           </button>
 
         </div>
@@ -1112,6 +1142,93 @@
 
 </a>
 
+<!-- PURCHASE RECEIPT MODAL -->
+<div id="receiptModal" class="modal-overlay">
+
+  <div class="modal-box receipt-box">
+
+    <div class="receipt-header">
+      <img
+        src="./icons/icon-512.png"
+        alt="MAMU DATA SUB"
+        class="receipt-logo"
+      >
+
+      <h2>MAMU DATA SUB</h2>
+      <p>Transaction Receipt</p>
+    </div>
+
+    <div id="receiptStatus" class="receipt-status">
+      ✓ Purchase Successful
+    </div>
+
+    <div class="receipt-details">
+
+      <div class="receipt-row">
+        <span>Phone</span>
+        <strong id="receiptPhone">—</strong>
+      </div>
+
+      <div class="receipt-row">
+        <span>Network</span>
+        <strong id="receiptNetwork">—</strong>
+      </div>
+
+      <div class="receipt-row">
+        <span>Plan</span>
+        <strong id="receiptPlan">—</strong>
+      </div>
+
+      <div class="receipt-row">
+        <span>Amount</span>
+        <strong id="receiptAmount">₦0.00</strong>
+      </div>
+
+      <div class="receipt-row">
+        <span>Reference</span>
+        <strong id="receiptReference">—</strong>
+      </div>
+
+      <div class="receipt-row">
+        <span>Provider Reference</span>
+        <strong id="receiptProviderReference">—</strong>
+      </div>
+
+      <div class="receipt-row">
+        <span>Date & Time</span>
+        <strong id="receiptDate">—</strong>
+      </div>
+
+      <div class="receipt-row">
+        <span>Wallet Balance</span>
+        <strong id="receiptBalance">₦0.00</strong>
+      </div>
+
+    </div>
+
+    <div class="receipt-actions">
+
+      <button
+        type="button"
+        id="shareReceiptBtn"
+        class="primary-btn full-btn"
+      >
+        Share Receipt
+      </button>
+
+      <button
+        type="button"
+        id="doneReceiptBtn"
+        class="secondary-btn full-btn"
+      >
+        Done
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
 
 <!-- TOAST -->
 <div id="toast" class="toast"></div>

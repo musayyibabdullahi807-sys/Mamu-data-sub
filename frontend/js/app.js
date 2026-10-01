@@ -126,10 +126,14 @@ async function apiRequest(endpoint, options = {}) {
 }
 
   if (!response.ok || data.success === false) {
-    throw new Error(
-      data.message || `Request failed (${response.status})`
-    );
-  }
+  const error = new Error(
+    data.message || `Request failed (${response.status})`
+  );
+
+  Object.assign(error, data);
+
+  throw error;
+}
 
   return data;
 }
@@ -658,6 +662,134 @@ function populateDataPlanSelect() {
 }
 
 /* =========================================================
+   PURCHASE RECEIPT
+   ========================================================= */
+
+let currentReceipt = null;
+
+function showPurchaseReceipt({
+  status = "successful",
+  phone = "",
+  network = "",
+  plan = "",
+  amount = 0,
+  reference = "",
+  providerReference = "",
+  walletBalance = 0,
+}) {
+  const modal = $("receiptModal");
+  if (!modal) return;
+
+  const statusEl = $("receiptStatus");
+
+  const statusMap = {
+    successful: {
+      text: "✓ Purchase Successful",
+      className: "",
+    },
+    failed: {
+      text: "❌ Purchase Failed",
+      className: "failed",
+    },
+    pending: {
+      text: "⏳ Transaction Pending",
+      className: "pending",
+    },
+  };
+
+  const currentStatus = statusMap[status] || statusMap.pending;
+
+  statusEl.textContent = currentStatus.text;
+  statusEl.className = `receipt-status ${currentStatus.className}`;
+
+  $("receiptPhone").textContent = phone || "—";
+  $("receiptNetwork").textContent = network || "—";
+  $("receiptPlan").textContent = plan || "—";
+  $("receiptAmount").textContent = money(amount);
+  $("receiptReference").textContent = reference || "—";
+  $("receiptProviderReference").textContent =
+    providerReference || "—";
+
+  $("receiptDate").textContent = new Date().toLocaleString();
+
+  $("receiptBalance").textContent = money(walletBalance);
+
+  currentReceipt = {
+    status,
+    phone,
+    network,
+    plan,
+    amount,
+    reference,
+    providerReference,
+    walletBalance,
+    date: $("receiptDate").textContent,
+  };
+
+  modal.classList.add("show");
+}
+
+function closePurchaseReceipt() {
+  const modal = $("receiptModal");
+  if (modal) {
+    modal.classList.remove("show");
+  }
+}
+
+function setupPurchaseReceipt() {
+  $("doneReceiptBtn")?.addEventListener(
+    "click",
+    closePurchaseReceipt
+  );
+
+  $("shareReceiptBtn")?.addEventListener("click", async () => {
+    if (!currentReceipt) return;
+
+    const receiptText = `
+MAMU DATA SUB
+Transaction Receipt
+
+Status: ${
+      currentReceipt.status === "successful"
+        ? "Purchase Successful"
+        : currentReceipt.status === "failed"
+        ? "Purchase Failed"
+        : "Transaction Pending"
+    }
+
+Phone: ${currentReceipt.phone}
+Network: ${currentReceipt.network}
+Plan: ${currentReceipt.plan}
+Amount: ${money(currentReceipt.amount)}
+Reference: ${currentReceipt.reference}
+Provider Reference: ${currentReceipt.providerReference || "—"}
+Date & Time: ${currentReceipt.date}
+Wallet Balance: ${money(currentReceipt.walletBalance)}
+
+Thank you for using MAMU DATA SUB.
+`.trim();
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "MAMU DATA SUB Receipt",
+          text: receiptText,
+        });
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          showToast("Unable to share receipt.", "error");
+        }
+      }
+    } else {
+      showToast(
+        "Sharing is not supported on this device.",
+        "error"
+      );
+    }
+  });
+}
+
+/* =========================================================
    DATA PURCHASE
    ========================================================= */
 
@@ -671,8 +803,15 @@ function setupDataPurchase() {
     const planId = $("dataPlan")?.value;
     const pin = $("dataPin")?.value.trim();
 
+    const selectedPlan = allDataPlans.find(
+      (plan) => String(plan._id) === String(planId)
+    );
+
     if (!phone || !planId || !pin) {
-      showToast("Please enter your phone, select a plan, and enter your PIN.", "error");
+      showToast(
+        "Please enter your phone, select a plan, and enter your PIN.",
+        "error"
+      );
       return;
     }
 
@@ -698,6 +837,23 @@ function setupDataPurchase() {
         }),
       });
 
+      showPurchaseReceipt({
+        status: data.status || "successful",
+        phone,
+        network: selectedPlan
+          ? networkName(selectedPlan)
+          : "—",
+        plan: selectedPlan
+          ? selectedPlan.plan || "Data Plan"
+          : "Data Plan",
+        amount: selectedPlan
+          ? Number(selectedPlan.sellingPrice || 0)
+          : 0,
+        reference: data.reference || "",
+        providerReference: data.providerReference || "",
+        walletBalance: Number(data.walletBalance || 0),
+      });
+
       showToast(
         data.message || "Data purchase request submitted successfully.",
         "success"
@@ -709,13 +865,37 @@ function setupDataPurchase() {
 
       await refreshHome();
       await loadDataPlans();
+
     } catch (error) {
-      showToast(error.message || "Data purchase failed.", "error");
+
+      showPurchaseReceipt({
+        status: error.status || "failed",
+        phone,
+        network: selectedPlan
+          ? networkName(selectedPlan)
+          : "—",
+        plan: selectedPlan
+          ? selectedPlan.plan || "Data Plan"
+          : "Data Plan",
+        amount: selectedPlan
+          ? Number(selectedPlan.sellingPrice || 0)
+          : 0,
+        reference: error.reference || "",
+        providerReference: error.providerReference || "",
+        walletBalance: Number(error.walletBalance || 0),
+      });
+
+      showToast(
+        error.message || "Data purchase failed.",
+        "error"
+      );
+
     } finally {
       setButtonLoading(button, false);
     }
   });
 }
+
 /* =========================================================
    AIRTIME
    ========================================================= */
@@ -1355,6 +1535,16 @@ function setupSignOut() {
   $("sideSignOutBtn")?.addEventListener("click", signOut);
 }
 
+function setupComingSoonServices() {
+  document.querySelectorAll(".service-card[data-service]").forEach((card) => {
+    card.addEventListener("click", () => {
+      const name = card.querySelector("strong")?.textContent || "This service";
+      showToast(`${name} is coming soon.`, "success");
+    });
+  });
+}
+
+
 function setupQuickButtons() {
   $("fundWalletBtn")?.addEventListener("click", () => {
     showPage("fund");
@@ -1580,6 +1770,7 @@ async function initApp() {
   setupSideMenu();
 
   setupDataPurchase();
+  setupPurchaseReceipt();  
   setupDataNetworkCards();
   setupAirtimePurchase();
   setupElectricityPayment();
@@ -1635,6 +1826,7 @@ loadProfile().catch((error) => {
   console.error("Profile load error:", error);
 });
 
+  setupComingSoonServices();
   setupQuickButtons();
   setupWhatsApp();
   setupWhatsAppFloating();
