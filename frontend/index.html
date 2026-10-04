@@ -20,7 +20,7 @@
 
     <header class="header">
       <div class="header-left">
-        <button class="profile-mini" id="dashboardProfileBtn" data-page="profilePage" type="button" aria-label="Profile photo">
+        <button class="profile-mini" id="dashboardProfileBtn" data-page="settingsPage" type="button" aria-label="Profile photo">
   <img id="dashboardProfilePhoto" class="profile-mini-photo" src="" alt="Profile photo">
   <span id="dashboardProfileInitial" class="profile-mini-initial">U</span>
 </button>
@@ -939,6 +939,57 @@
 
 </div>
 
+<!-- SETTINGS PAGE -->
+<section class="page" id="settingsPage">
+  <header class="inner-header">
+    <button class="back-btn" data-back="homePage" type="button">‹</button>
+    <div>
+      <h2>Settings</h2>
+      <p>Manage your account and preferences</p>
+    </div>
+  </header>
+
+  <main class="page-content">
+    <div class="settings-list">
+      <button class="settings-item" data-page="profilePage" type="button">
+        <span class="settings-item-icon">P</span>
+        <span class="settings-item-content">
+          <strong>Profile</strong>
+          <small>Manage your account information</small>
+        </span>
+        <span class="settings-item-arrow">›</span>
+      </button>
+
+      <button class="settings-item" id="settingsTransactionPinBtn" type="button">
+        <span class="settings-item-icon">PIN</span>
+        <span class="settings-item-content">
+          <strong>Transaction PIN</strong>
+          <small>Change or reset your transaction PIN</small>
+        </span>
+        <span class="settings-item-arrow">›</span>
+      </button>
+
+      <button class="settings-item" id="settingsSupportBtn" type="button">
+        <span class="settings-item-icon">S</span>
+        <span class="settings-item-content">
+          <strong>Support</strong>
+          <small>Get help with your MAMU account</small>
+        </span>
+        <span class="settings-item-arrow">›</span>
+      </button>
+
+      <button class="settings-item settings-signout" id="settingsSignOutBtn" type="button">
+        <span class="settings-item-icon">↪</span>
+        <span class="settings-item-content">
+          <strong>Sign Out</strong>
+          <small>Sign out of this account</small>
+        </span>
+        <span class="settings-item-arrow">›</span>
+      </button>
+    </div>
+  </main>
+</section>
+
 <!-- RESET TRANSACTION PIN MODAL -->
 <div id="resetTransactionPinModal" class="modal-overlay">
   <div class="modal-box">
@@ -1058,7 +1109,7 @@
       Referral
     </button>
 
-    <button data-page="profilePage" type="button">
+    <button data-page="settingsPage" type="button">
       Profile
     </button>
 
@@ -1256,9 +1307,9 @@
     <span>History</span>
   </button>
 
-  <button class="bottom-nav-item" data-page="profilePage" type="button">
+  <button class="bottom-nav-item" data-page="settingsPage" type="button">
     <span class="icon">●</span>
-    <span>Profile</span>
+    <span>Settings</span>
   </button>
 
 </nav>

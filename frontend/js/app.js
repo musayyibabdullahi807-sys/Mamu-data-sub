@@ -328,16 +328,16 @@ function transactionLabel(type) {
 
 function transactionIcon(type) {
   const icons = {
-    wallet_funding: "💰",
-    data_purchase: "📱",
-    airtime_purchase: "📞",
-    bill_payment: "⚡",
-    refund: "↩️",
-    withdrawal: "💸",
-    transfer: "🔄",
+    wallet_funding: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v12H4z"/><path d="M4 10h16"/><path d="M16 14h2"/></svg>`,
+    data_purchase: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 6h4M11 18h2"/></svg>`,
+    airtime_purchase: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h4l2 5-3 2a15 15 0 0 0 5 5l2-3 5 2v4c0 1-1 2-2 2C11 20 4 13 4 5c0-1 1-2 2-2z"/></svg>`,
+    bill_payment: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10v18l-5-3-5 3z"/><path d="M9 8h6M9 12h6"/></svg>`,
+    refund: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H5l4-4M5 7a8 8 0 1 1-1 9"/></svg>`,
+    withdrawal: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14v12H5z"/><path d="M8 8V5h8v3M9 13h6"/></svg>`,
+    transfer: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l-3-3M17 17H7l3 3"/></svg>`
   };
 
-  return icons[type] || "💳";
+  return icons[type] || `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>`;
 }
 
 function formatDate(dateValue) {
@@ -357,7 +357,32 @@ function formatDate(dateValue) {
 }
 
 function renderTransaction(transaction) {
-  const status = transaction.status || "pending";
+  const status = String(transaction.status || "pending").toLowerCase();
+
+const statusMap = {
+  success: {
+    label: "Successful",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>`
+  },
+  successful: {
+    label: "Successful",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 2.5 2.5L16 9"></path></svg>`
+  },
+  pending: {
+    label: "Pending",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>`
+  },
+  failed: {
+    label: "Failed",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m9 9 6 6M15 9l-6 6"></path></svg>`
+  },
+  fail: {
+    label: "Failed",
+    icon: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m9 9 6 6M15 9l-6 6"></path></svg>`
+  }
+};
+
+const statusInfo = statusMap[status] || statusMap.pending;
 
   return `
     <div class="transaction-item">
@@ -385,8 +410,9 @@ function renderTransaction(transaction) {
         </div>
 
         <span class="transaction-status status-${escapeHtml(status)}">
-          ${escapeHtml(status)}
-        </span>
+  ${statusInfo.icon}
+  ${escapeHtml(statusInfo.label)}
+</span>
       </div>
     </div>
   `;
@@ -400,7 +426,7 @@ function renderRecentTransactions(transactions) {
   if (!transactions.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">💳</div>
+        <div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h3"/></svg></div>
         <h4>No transactions yet</h4>
         <p>Your recent transactions will appear here.</p>
       </div>
@@ -423,7 +449,7 @@ function renderAllTransactions(transactions) {
   if (!transactions.length) {
     container.innerHTML = `
       <div class="empty-state">
-        <div class="empty-state-icon">📜</div>
+        <div class="empty-state-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h12v18H6z"/><path d="M9 7h6M9 11h6M9 15h4"/></svg></div>
         <h4>No transactions yet</h4>
         <p>Your transaction history will appear here.</p>
       </div>
@@ -1535,6 +1561,21 @@ function setupSignOut() {
   $("sideSignOutBtn")?.addEventListener("click", signOut);
 }
 
+function setupSettings() {
+  $("settingsTransactionPinBtn")?.addEventListener("click", () => {
+    $("resetTransactionPinBtn")?.click();
+  });
+
+  $("settingsSupportBtn")?.addEventListener("click", () => {
+    openWhatsAppSupport();
+  });
+
+  $("settingsSignOutBtn")?.addEventListener("click", () => {
+    $("signOutBtn")?.click();
+  });
+}
+
+
 function setupComingSoonServices() {
   document.querySelectorAll(".service-card[data-service]").forEach((card) => {
     card.addEventListener("click", () => {
@@ -1828,6 +1869,7 @@ loadProfile().catch((error) => {
 
   setupComingSoonServices();
   setupQuickButtons();
+  setupSettings();
   setupWhatsApp();
   setupWhatsAppFloating();
   setupSignOut();
