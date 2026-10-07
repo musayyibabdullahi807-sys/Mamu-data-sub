@@ -1656,48 +1656,48 @@ function openSMSSupport() {
 }
 
 function setupWhatsApp() {
-  const supportBtn = $("whatsappBtn");
-  const supportMenu = $("supportMenu");
-  const whatsappSupportBtn = $("whatsappSupportBtn");
-  const smsSupportBtn = $("smsSupportBtn");
-  const closeSupportBtn = $("closeSupportBtn");
+  const floatingBtn = $("whatsappFloat");
+  const overlay = $("whatsappOptionsOverlay");
+  const closeBtn = $("closeWhatsappOptions");
+  const channelBtn = $("whatsappChannelBtn");
+  const supportBtn = $("whatsappSupportOption");
 
-  if (!supportBtn || !supportMenu) return;
+  if (!floatingBtn || !overlay) return;
 
-  supportBtn.addEventListener("click", () => {
-    supportMenu.classList.toggle("active");
+  const openOptions = () => {
+    overlay.classList.add("active");
+    overlay.setAttribute("aria-hidden", "false");
+  };
+
+  const closeOptions = () => {
+    overlay.classList.remove("active");
+    overlay.setAttribute("aria-hidden", "true");
+  };
+
+  floatingBtn.addEventListener("click", openOptions);
+
+  closeBtn?.addEventListener("click", closeOptions);
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) {
+      closeOptions();
+    }
   });
 
-  whatsappSupportBtn?.addEventListener(
-    "click",
-    openWhatsAppSupport
-  );
+  channelBtn?.addEventListener("click", () => {
+    window.open(
+      "https://whatsapp.com/channel/0029Vb9HwQ7JP21081DB8l2g",
+      "_blank",
+      "noopener,noreferrer"
+    );
+    closeOptions();
+  });
 
-  smsSupportBtn?.addEventListener(
-    "click",
-    openSMSSupport
-  );
-
-  closeSupportBtn?.addEventListener("click", () => {
-    supportMenu.classList.remove("active");
+  supportBtn?.addEventListener("click", () => {
+    openWhatsAppSupport();
+    closeOptions();
   });
 }
-
-/* =========================================================
-   HOME REFRESH
-   ========================================================= */
-
-async function refreshHome() {
-  await Promise.all([
-    loadWallet(),
-    loadTransactions(),
-  ]);
-}
-
-/* =========================================================
-   TRANSACTION PIN SETUP
-   ========================================================= */
-
 function openTransactionPinModal() {
   const modal = document.getElementById("transactionPinModal");
   const form = document.getElementById("transactionPinForm");
