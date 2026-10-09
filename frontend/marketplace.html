@@ -53,9 +53,11 @@
     <div class="product-detail-page-content"><div class="product-detail-media-row"><div class="product-detail-photo-panel"><div class="product-detail-viewer"><button id="marketProductPrevious" class="product-detail-arrow previous" type="button" aria-label="Previous photo">‹</button><div id="marketProductDetailMedia" class="product-detail-media"></div><button id="marketProductNext" class="product-detail-arrow next" type="button" aria-label="Next photo">›</button></div><div id="marketProductDetailCounter" class="product-detail-counter"></div></div><div id="marketProductDetailVideo" class="product-detail-video"></div></div><div class="product-detail-info"><strong id="marketProductDetailPrice" class="market-price"></strong><p id="marketProductDetailCategory"></p><p id="marketProductDetailDescription"></p><p id="marketProductDetailStock"></p></div></div>
   </main>
   <script src="./js/marketplace-product-detail.js"></script>
+  <script src="./js/marketplace-blob-client.bundle.js?v=vercel-blob-1"></script>
   <script>
     const token = () => localStorage.getItem("mamu_token");
     let visibleProducts = [];
+    let approvedSellerId = "";
     const statusBox = document.getElementById("form-status");
     const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     const naira = (kobo) => new Intl.NumberFormat("en-NG", { style:"currency", currency:"NGN", maximumFractionDigits:2 }).format(kobo / 100);
@@ -83,6 +85,7 @@
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || "Could not load your application");
         const sellers = data.sellers || (data.seller ? [data.seller] : []);
+        approvedSellerId = sellers.find((seller) => seller.status === "approved")?.id || "";
         area.innerHTML = sellers.length ? sellers.map((seller) => `<div class="sellerStatus"><b>${escapeHtml(seller.businessName)}</b> · ${seller.status === "approved" ? "Approved" : seller.status === "pending" ? "Pending review" : escapeHtml(seller.status)}${seller.reviewNote ? `<br>${escapeHtml(seller.reviewNote)}` : ""}<br>${(seller.products || []).length} products</div>`).join("") : "You have not registered a business yet.";
         document.getElementById("listing-section").hidden = !sellers.some((seller) => seller.status === "approved");
         return sellers;
@@ -119,11 +122,25 @@
       button.disabled = true; status.className = "status"; status.textContent = "";
       try {
         const imageUrls = []; let videoUrl = ""; const files = [...selectedImages.map((file) => ({ file, kind:"photo" })), ...(selectedVideo ? [{ file:selectedVideo, kind:"video" }] : [])];
+        let storage = "local";
+        if (files.length) {
+          const modeResponse = await fetch("/api/marketplace/media-upload-mode", { headers:{ Authorization:`Bearer ${token()}` } });
+          const modeData = await modeResponse.json(); if (!modeResponse.ok || !modeData.success) throw new Error(modeData.message || "Could not check media storage.");
+          storage = modeData.storage;
+          if (storage === "unconfigured") throw new Error("Product media storage is not configured on this Vercel site yet.");
+        }
         for (let i = 0; i < files.length; i += 1) {
           const { file:media, kind } = files[i]; status.textContent = kind === "video" ? "Uploading video..." : `Uploading photo ${i + 1}/${selectedImages.length}...`;
-          const uploadResponse = await fetch("/api/marketplace/product-images", { method:"POST", headers:{ Authorization:`Bearer ${token()}`, "Content-Type":media.type }, body:media });
-          const uploadData = await uploadResponse.json(); if (!uploadResponse.ok) throw new Error(uploadData.message || "Could not upload media.");
-          if (uploadData.kind === "video") videoUrl = uploadData.mediaUrl; else imageUrls.push(uploadData.mediaUrl);
+          let mediaUrl;
+          if (storage === "vercel-blob") {
+            if (typeof window.uploadMarketplaceBlob !== "function") throw new Error("Vercel upload support did not load. Refresh and try again.");
+            mediaUrl = await window.uploadMarketplaceBlob(media, approvedSellerId, (percentage) => { status.textContent = `Uploading ${kind}... ${Math.round(percentage)}%`; });
+          } else {
+            const uploadResponse = await fetch("/api/marketplace/product-images", { method:"POST", headers:{ Authorization:`Bearer ${token()}`, "Content-Type":media.type }, body:media });
+            const uploadData = await uploadResponse.json(); if (!uploadResponse.ok) throw new Error(uploadData.message || "Could not upload media.");
+            mediaUrl = uploadData.mediaUrl;
+          }
+          if (kind === "video") videoUrl = mediaUrl; else imageUrls.push(mediaUrl);
         }
         const body = { name:payload.name, description:payload.description, category:payload.category, basePriceKobo:toKobo(payload.basePriceNaira), sellerProfitKobo:toKobo(payload.profitNaira), stock:Number(payload.stock), imageUrls, videoUrl };
         status.textContent = "Saving product...";

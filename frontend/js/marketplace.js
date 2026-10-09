@@ -205,13 +205,28 @@
     try {
       const imageUrls = []; let videoUrl = "";
       const files = [...selectedProductImages.map((file) => ({ file, kind:"photo" })), ...(selectedProductVideo ? [{ file:selectedProductVideo, kind:"video" }] : [])];
+      let storage = "local";
+      if (files.length) {
+        const modeResponse = await fetch("/api/marketplace/media-upload-mode", { headers:authHeaders() });
+        const modeData = await modeResponse.json();
+        if (!modeResponse.ok || !modeData.success) throw new Error(modeData.message || "Could not check media storage.");
+        storage = modeData.storage;
+        if (storage === "unconfigured") throw new Error("Product media storage is not configured on this Vercel site yet.");
+      }
       for (let index = 0; index < files.length; index += 1) {
           const { file:mediaFile, kind } = files[index];
           status.textContent = kind === "video" ? "Uploading video..." : `Uploading photo ${index + 1}/${selectedProductImages.length}...`;
-          const uploadResponse = await fetch("/api/marketplace/product-images", { method:"POST", headers:{ ...authHeaders(), "Content-Type":mediaFile.type }, body:mediaFile });
-          const uploadData = await uploadResponse.json();
-          if (!uploadResponse.ok || !uploadData.success) throw new Error(uploadData.message || "Could not upload product media.");
-          if (uploadData.kind === "video") videoUrl = uploadData.mediaUrl; else imageUrls.push(uploadData.mediaUrl);
+          let mediaUrl;
+          if (storage === "vercel-blob") {
+            if (typeof window.uploadMarketplaceBlob !== "function") throw new Error("Vercel upload support did not load. Refresh and try again.");
+            mediaUrl = await window.uploadMarketplaceBlob(mediaFile, values.sellerId, (percentage) => { status.textContent = `Uploading ${kind}... ${Math.round(percentage)}%`; });
+          } else {
+            const uploadResponse = await fetch("/api/marketplace/product-images", { method:"POST", headers:{ ...authHeaders(), "Content-Type":mediaFile.type }, body:mediaFile });
+            const uploadData = await uploadResponse.json();
+            if (!uploadResponse.ok || !uploadData.success) throw new Error(uploadData.message || "Could not upload product media.");
+            mediaUrl = uploadData.mediaUrl;
+          }
+          if (kind === "video") videoUrl = mediaUrl; else imageUrls.push(mediaUrl);
       }
       const payload = { sellerId:values.sellerId, name:values.name, description:values.description, category:values.category, basePriceKobo:toKobo(values.basePriceNaira), sellerProfitKobo:toKobo(values.profitNaira), stock:Number(values.stock), imageUrls, videoUrl };
       status.textContent = "Saving product...";

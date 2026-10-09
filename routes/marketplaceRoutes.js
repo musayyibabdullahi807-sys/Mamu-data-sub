@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
+const { handleUpload } = require("@vercel/blob/client");
+const { del: deleteBlob } = require("@vercel/blob");
 const protect = require("../middleware/authMiddleware");
 const Seller = require("../models/MarketplaceSeller");
 const Product = require("../models/MarketplaceProduct");
@@ -10,6 +12,14 @@ const User = require("../models/User");
 
 const router = express.Router();
 const text = (value, max) => typeof value === "string" ? value.trim().slice(0, max) : "";
+const isAllowedMediaUrl = (value, sellerId) => {
+  if (typeof value !== "string") return false;
+  if (/^\/uploads\/marketplace\/[a-f0-9-]+\.(?:jpg|png|webp|mp4|mov|webm|3gp)$/i.test(value)) return true;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname.endsWith(".public.blob.vercel-storage.com") && url.pathname.startsWith(sellerId ? `/marketplace/${sellerId}/` : "/marketplace/");
+  } catch (_) { return false; }
+};
 const MARKETPLACE_ADMIN_USER_ID = "6ab274d7c6cacf9e61d034f6";
 const adminOnly = (req, res, next) => {
   const userId = String(req.user?._id || "").trim().toLowerCase();
@@ -112,6 +122,57 @@ router.patch("/admin/seller-applications/:id", protect, adminOnly, async (req, r
   return res.json({ success: true, seller: sellerView(seller) });
 });
 
+router.get("/media-upload-mode", protect, (req, res) => {
+  const storage = process.env.BLOB_READ_WRITE_TOKEN ? "vercel-blob" : process.env.VERCEL ? "unconfigured" : "local";
+  return res.json({ success: true, storage });
+});
+
+const blobUploadCallbacks = (req) => ({
+  onBeforeGenerateToken: async (pathname, clientPayload) => {
+    let requestedSellerId = "";
+    try { requestedSellerId = JSON.parse(clientPayload || "{}").sellerId || ""; } catch (_) {}
+    const seller = await Seller.findOne({ _id: requestedSellerId, owner: req.user._id, status: "approved" }).select("_id");
+    if (!seller) throw new Error("An approved business belonging to this account is required");
+    if (!pathname.startsWith(`marketplace/${seller._id}/`)) throw new Error("Invalid marketplace upload path");
+    return {
+      allowedContentTypes: ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime", "video/webm", "video/3gpp"],
+      maximumSizeInBytes: 50 * 1024 * 1024,
+      addRandomSuffix: true,
+      tokenPayload: String(seller._id),
+    };
+  },
+  onUploadCompleted: async ({ blob, tokenPayload }) => {
+    if (!mongoose.isValidObjectId(tokenPayload) || !blob.pathname.startsWith(`marketplace/${tokenPayload}/`)) {
+      throw new Error("Marketplace upload did not match the authorized business");
+    }
+  },
+});
+
+// Vercel Blob calls back after a direct client upload; the signed Blob event is verified by handleUpload.
+router.post("/product-images", async (req, res, next) => {
+  if (!req.is("application/json") || req.body?.type !== "blob.upload-completed") return next();
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ success: false, message: "Vercel Blob storage is not configured" });
+  try {
+    const result = await handleUpload({ request: req, body: req.body, onBeforeGenerateToken: async () => ({}), onUploadCompleted: async ({ blob, tokenPayload }) => {
+      if (!mongoose.isValidObjectId(tokenPayload) || !blob.pathname.startsWith(`marketplace/${tokenPayload}/`)) throw new Error("Invalid marketplace upload callback");
+    } });
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || "Could not complete media upload" });
+  }
+});
+
+router.post("/product-images", protect, async (req, res, next) => {
+  if (!req.is("application/json")) return next();
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ success: false, message: "Vercel Blob storage is not configured" });
+  try {
+    const result = await handleUpload({ request: req, body: req.body, ...blobUploadCallbacks(req) });
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(400).json({ success: false, message: error.message || "Could not prepare direct upload" });
+  }
+});
+
 router.post("/product-images", protect, express.raw({ type: ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime", "video/webm", "video/3gpp"], limit: "50mb" }), async (req, res) => {
   try {
     const seller = await Seller.findOne({ owner: req.user._id, status: "approved" });
@@ -148,7 +209,7 @@ router.post("/products", protect, async (req, res) => {
   const submittedImages = Array.isArray(req.body.imageUrls) ? req.body.imageUrls : [];
   const imageUrls = submittedImages.slice(0, 9).map((url) => text(url, 1000));
   const videoUrl = text(req.body.videoUrl, 1000);
-  if (submittedImages.length > 9 || (videoUrl && !videoUrl.startsWith("/uploads/marketplace/"))) return res.status(400).json({ success: false, message: "A product can have up to 9 photos and 1 uploaded video" });
+  if (submittedImages.length > 9 || !imageUrls.every((url) => isAllowedMediaUrl(url, seller._id)) || (videoUrl && !isAllowedMediaUrl(videoUrl, seller._id))) return res.status(400).json({ success: false, message: "Use uploaded photos and video from approved marketplace storage" });
   if (!name || !description || !category || !Number.isSafeInteger(basePriceKobo) || basePriceKobo < 1 || !Number.isSafeInteger(sellerProfitKobo) || sellerProfitKobo < 0 || !Number.isSafeInteger(stock) || stock < 0) return res.status(400).json({ success: false, message: "Provide product details, price and profit in kobo, and a non-negative stock count" });
   try {
     const product = await Product.create({ seller: seller._id, name, description, category, imageUrls, videoUrl, basePriceKobo, sellerProfitKobo, stock });
@@ -166,6 +227,10 @@ router.delete("/products/:id", protect, async (req, res) => {
     await Product.deleteOne({ _id: product._id });
     const mediaUrls = [...(product.imageUrls || []), product.videoUrl].filter(Boolean);
     await Promise.all(mediaUrls.map(async (url) => {
+      if (url.startsWith("https://") && isAllowedMediaUrl(url) && process.env.BLOB_READ_WRITE_TOKEN) {
+        await deleteBlob(url);
+        return;
+      }
       const match = /^\/uploads\/marketplace\/([a-f0-9-]+\.(?:jpg|png|webp|mp4|mov|webm|3gp))$/i.exec(url);
       if (!match) return;
       const filePath = path.join(__dirname, "..", "frontend", "uploads", "marketplace", path.basename(match[1]));

@@ -25,8 +25,17 @@ const securityRoutes = require("./routes/securityRoutes");
 const marketplaceRoutes = require("./routes/marketplaceRoutes");
 const gsubzExtraRoutes = require("./routes/gsubzExtraRoutes");
 
-// Security
-app.use(helmet());
+// Security: marketplace media uploads and playback are served from Vercel Blob.
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      "connect-src": ["'self'", "https://*.blob.vercel-storage.com"],
+      "img-src": ["'self'", "data:", "blob:", "https://*.public.blob.vercel-storage.com"],
+      "media-src": ["'self'", "blob:", "https://*.public.blob.vercel-storage.com"],
+    },
+  },
+}));
 
 app.use(
   express.json({
