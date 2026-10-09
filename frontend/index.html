@@ -8,7 +8,9 @@
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>MAMU DATA SUB</title>
+  <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";}catch(_){}</script>
   <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="./css/marketplace.css?v=product-gap-1">
 </head>
 
 <body>
@@ -50,6 +52,7 @@
         <div class="wallet-top">
           <span>Available Balance</span>
 
+          <button id="refreshWalletBalance" class="balance-refresh" type="button" aria-label="Refresh wallet balance" title="Refresh balance">↻</button>
           <button id="toggleBalance" class="balance-toggle" type="button">
             Hide
           </button>
@@ -128,10 +131,10 @@
           <button class="service-card" type="button" data-service="travel">
             <span class="service-icon">TRIP</span>
             <strong>Travel</strong>
-            <small>Coming Soon</small>
+            <small>Requires provider</small>
           </button>
 
-          <button class="service-card" data-page="educationPage" type="button">
+          <button class="service-card" type="button" data-service="education">
             <span class="service-icon">EDU</span>
             <strong>Education</strong>
             <small>Exam services</small>
@@ -140,37 +143,37 @@
           <button class="service-card" type="button" data-service="recharge-pin">
             <span class="service-icon">PIN</span>
             <strong>Recharge PIN</strong>
-            <small>Coming Soon</small>
+            <small>Generate recharge card PINs</small>
           </button>
 
           <button class="service-card" type="button" data-service="bulk-sms">
             <span class="service-icon">SMS</span>
             <strong>Bulk SMS</strong>
-            <small>Coming Soon</small>
+            <small>Send messages to many numbers</small>
           </button>
 
           <button class="service-card" type="button" data-service="esim">
             <span class="service-icon">SIM</span>
             <strong>eSIM</strong>
-            <small>Coming Soon</small>
+            <small>International data packages</small>
           </button>
 
           <button class="service-card" type="button" data-service="social-media">
             <span class="service-icon">SOC</span>
             <strong>Social Media</strong>
-            <small>Coming Soon</small>
+            <small>Promote a profile or post</small>
           </button>
 
           <button class="service-card" type="button" data-service="premium-apps">
             <span class="service-icon">APP</span>
             <strong>Premium Apps</strong>
-            <small>Coming Soon</small>
+            <small>Canva Pro subscriptions</small>
           </button>
 
           <button class="service-card" type="button" data-service="games">
             <span class="service-icon">GAME</span>
             <strong>Games</strong>
-            <small>Coming Soon</small>
+            <small>Game top-ups and gift cards</small>
           </button>
 
           <button class="service-card" data-page="referralPage" type="button">
@@ -306,21 +309,9 @@
         </div>
 
 
-        <div class="form-group">
-          <label for="dataPin">Transaction PIN</label>
+        <p class="purchase-flow-hint">Enter your phone number and choose a plan. Purchase confirmation will appear automatically.</p>
 
-          <input
-            id="dataPin"
-            type="password"
-            inputmode="numeric"
-            maxlength="4"
-            autocomplete="off"
-            placeholder="Enter 4-digit PIN"
-          >
-        </div>
-
-
-        <button id="purchaseDataBtn" class="primary-btn full-btn" type="button">
+        <button id="purchaseDataBtn" class="primary-btn full-btn" type="button" hidden>
           Purchase Data
         </button>
 
@@ -401,7 +392,7 @@
         </div>
 
 
-        <div class="form-group">
+        <div class="form-group" hidden>
           <label for="airtimePin">Transaction PIN</label>
 
           <input
@@ -414,7 +405,9 @@
         </div>
 
 
-        <button id="purchaseAirtimeBtn" class="primary-btn full-btn" type="button">
+        <p class="purchase-flow-hint">Complete the details above. Purchase confirmation will appear automatically.</p>
+
+        <button id="purchaseAirtimeBtn" class="primary-btn full-btn" type="button" hidden>
           Purchase Airtime
         </button>
 
@@ -484,7 +477,7 @@
         </div>
 
 
-        <div class="form-group">
+        <div class="form-group" hidden>
           <label for="electricityPin">Transaction PIN</label>
 
           <input
@@ -497,7 +490,9 @@
         </div>
 
 
-        <button id="payElectricityBtn" class="primary-btn full-btn" type="button">
+        <p class="purchase-flow-hint">Complete the details above. Purchase confirmation will appear automatically.</p>
+
+        <button id="payElectricityBtn" class="primary-btn full-btn" type="button" hidden>
           Pay Electricity Bill
         </button>
 
@@ -576,7 +571,7 @@
         </div>
 
 
-        <div class="form-group">
+        <div class="form-group" hidden>
           <label for="tvPin">Transaction PIN</label>
 
           <input
@@ -589,7 +584,9 @@
         </div>
 
 
-        <button id="payTvBtn" class="primary-btn full-btn" type="button">
+        <p class="purchase-flow-hint">Complete the details above. Purchase confirmation will appear automatically.</p>
+
+        <button id="payTvBtn" class="primary-btn full-btn" type="button" hidden>
           Pay TV Subscription
         </button>
 
@@ -660,6 +657,19 @@
     </main>
   </section>
 
+
+  <section class="page" id="quickServicePage">
+    <header class="inner-header">
+      <button class="back-btn" data-back="homePage" type="button" aria-label="Back to Home">‹</button>
+      <div><h2 id="quickServiceTitle">Service</h2><p id="quickServiceDescription">Complete the details to continue</p></div>
+    </header>
+    <main class="page-content">
+      <div class="form-card quick-service-card">
+        <div id="quickServiceContent"></div>
+        <p id="quickServiceStatus" class="quick-service-status" aria-live="polite"></p>
+      </div>
+    </main>
+  </section>
 
   <!-- FUND WALLET PAGE -->
   <section class="page" id="fundPage">
@@ -906,6 +916,12 @@
           <input id="profileAccountTypeInput" type="text" readonly>
         </div>
 
+        <div class="form-group">
+          <label for="profileAccountIdInput">Account ID</label>
+          <input id="profileAccountIdInput" type="text" readonly>
+          <button id="copyMarketplaceAccountId" class="secondary-btn full-btn" type="button" style="margin-top:8px">Copy Account ID</button>
+        </div>
+
         <button id="saveProfileBtn" class="primary-btn full-btn" type="button">
           Save Changes
         </button>
@@ -922,8 +938,6 @@
 
     </main>
   </section>
-
-</div>
 
 <!-- SETTINGS PAGE -->
 <section class="page" id="settingsPage">
@@ -964,6 +978,24 @@
         <span class="settings-item-arrow">›</span>
       </button>
 
+      <label class="settings-item settings-theme-toggle" for="settingsDarkModeToggle">
+        <span class="settings-item-icon">◐</span>
+        <span class="settings-item-content">
+          <strong>Dark Mode</strong>
+          <small>Use a dark appearance across the app</small>
+        </span>
+        <input id="settingsDarkModeToggle" type="checkbox" role="switch" aria-label="Enable dark mode">
+      </label>
+
+      <button class="settings-item" id="settingsMarketplaceAdminBtn" type="button" hidden>
+        <span class="settings-item-icon">M</span>
+        <span class="settings-item-content">
+          <strong>Marketplace Admin</strong>
+          <small>Review business registrations and requests</small>
+        </span>
+        <span class="settings-item-arrow">›</span>
+      </button>
+
       <button class="settings-item settings-signout" id="settingsSignOutBtn" type="button">
         <span class="settings-item-icon">↪</span>
         <span class="settings-item-content">
@@ -974,6 +1006,30 @@
       </button>
     </div>
   </main>
+</section>
+
+<section class="page" id="marketplacePage">
+  <header class="inner-header">
+    <button class="back-btn" data-back="homePage" type="button" aria-label="Back to Home">‹</button>
+    <div><h2>MAMU Marketplace</h2><p>Shop Nigerian businesses</p></div>
+    <div class="market-menu-wrap"><button id="marketMenuButton" class="market-button secondary" type="button" aria-label="Marketplace menu" aria-expanded="false">⋮</button><div id="marketMenu" class="market-menu" hidden><button id="marketBrowseProducts" type="button">Browse products</button><button id="marketOpenShop" type="button">My businesses</button><button id="marketMyProductsButton" type="button">My products</button><button id="marketAddProduct" type="button">Add a product</button><button id="marketAddBusiness" type="button">Add new business</button><button id="marketAdminLink" type="button" hidden>Marketplace Admin</button></div></div>
+  </header>
+  <div id="marketSearchSection" class="market-search"><input id="marketSearch" type="search" placeholder="Search products or categories..." aria-label="Search products"><button id="marketRefresh" class="market-button" type="button">Search</button></div>
+  <div id="marketProducts" class="market-products"><div class="market-status">Loading products...</div></div>
+  <section id="marketMyProductsPanel" class="market-panel" hidden><h2>My products</h2><div id="marketMyProducts" class="market-products"></div></section>
+  <section id="marketShopPanel" class="market-panel" hidden><h2>My businesses</h2><div id="marketSellerStatus" class="market-application">Checking your businesses...</div><div id="marketBusinesses"></div>
+    <form id="marketSellerForm" class="market-form"><input name="businessName" required maxlength="120" placeholder="Business name"><input name="phone" required maxlength="20" placeholder="Phone number"><input name="address" required maxlength="300" placeholder="Full business address"><input name="city" required maxlength="80" placeholder="City"><input name="state" required maxlength="80" placeholder="State"><button class="market-button" type="submit">Submit application</button><div id="marketSellerMessage" class="market-message" aria-live="polite"></div></form>
+    <p class="market-note">Your application must be approved before you can list products. Sign in to your MAMU account before applying.</p>
+    <section id="marketListingSection" hidden style="margin-top:18px;border-top:1px solid #e5e7eb;padding-top:16px"><h2>Add a product</h2><form id="marketListingForm" class="market-form"><select id="marketBusinessSelect" name="sellerId" required aria-label="Choose business"></select><input name="name" required maxlength="140" placeholder="Product name"><textarea name="description" required maxlength="3000" placeholder="Product description"></textarea><input name="category" required maxlength="80" placeholder="Category, e.g. Home goods"><input name="basePriceNaira" required type="number" min="1" step="0.01" placeholder="Your base price (₦)"><input name="profitNaira" required type="number" min="0" step="0.01" placeholder="Your profit (₦)"><input name="stock" required type="number" min="0" step="1" placeholder="Available quantity"><div class="market-upload-label"><strong>Product media</strong><small>Choose up to 9 photos and 1 video. You can select from your phone or use the camera.</small><div class="market-media-actions"><button id="marketChoosePhotos" class="market-button secondary" type="button">Choose photos</button><button id="marketTakePhoto" class="market-button secondary" type="button">Take photo</button><button id="marketChooseVideo" class="market-button secondary" type="button">Choose video</button><button id="marketRecordVideo" class="market-button secondary" type="button">Record video</button></div><input id="marketProductPhotos" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><input id="marketCameraPhoto" type="file" accept="image/*" capture="environment" hidden><input id="marketProductVideo" type="file" accept="video/mp4,video/quicktime,video/webm,video/3gpp" hidden><input id="marketCameraVideo" type="file" accept="video/*" capture="environment" hidden><small id="marketMediaStatus" aria-live="polite">JPEG, PNG or WebP photos: max 5 MB each. Videos: max 50 MB.</small></div><button class="market-button" type="submit">Add product</button><div id="marketListingMessage" class="market-message" aria-live="polite"></div></form></section>
+    <section id="marketAdminSection" hidden style="margin-top:18px;border-top:1px solid #e5e7eb;padding-top:16px"><h2>Pending seller applications</h2><button id="marketAdminRefresh" class="market-button secondary" type="button">Load applications</button><div id="marketAdminList" class="market-message" style="margin-top:10px"></div></section>
+  </section>
+</section>
+
+</div>
+
+<section id="marketProductDetailPage" class="page product-detail-page">
+  <header class="inner-header"><button id="marketProductDetailBack" class="back-btn" type="button" aria-label="Back to Marketplace">‹</button><div><h2 id="marketProductDetailTitle"></h2><p id="marketProductDetailShop"></p></div><button id="marketProductDelete" class="product-delete-button" type="button" hidden>Delete</button></header>
+  <main class="page-content"><div class="product-detail-page-content"><div class="product-detail-media-row"><div class="product-detail-photo-panel"><div class="product-detail-viewer"><button id="marketProductPrevious" class="product-detail-arrow previous" type="button" aria-label="Previous photo">‹</button><div id="marketProductDetailMedia" class="product-detail-media"></div><button id="marketProductNext" class="product-detail-arrow next" type="button" aria-label="Next photo">›</button></div><div id="marketProductDetailCounter" class="product-detail-counter"></div></div><div id="marketProductDetailVideo" class="product-detail-video"></div></div><div class="product-detail-info"><strong id="marketProductDetailPrice" class="market-price"></strong><p id="marketProductDetailCategory"></p><p id="marketProductDetailDescription"></p><p id="marketProductDetailStock"></p></div></div></main>
 </section>
 
 <!-- RESET TRANSACTION PIN MODAL -->
@@ -1110,6 +1166,43 @@
 
 <div class="menu-overlay" id="menuOverlay"></div>
 
+
+<!-- DATA PURCHASE LOADING STATE -->
+<div id="dataPurchaseLoading" class="modal-overlay">
+  <div class="modal-box purchase-loading-box" role="status" aria-live="polite">
+    <span class="purchase-spinner" aria-hidden="true"></span>
+    <h2>Preparing your purchase</h2>
+    <p>Please wait while we prepare your data purchase confirmation.</p>
+  </div>
+</div>
+
+<!-- DATA PURCHASE PIN PROMPT -->
+<div id="dataPurchasePinModal" class="modal-overlay">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="dataPurchasePinTitle">
+    <h2 id="dataPurchasePinTitle">Confirm data purchase</h2>
+    <p id="dataPurchasePinDetails">Enter your transaction PIN to continue.</p>
+    <div class="form-group">
+      <label for="dataPurchasePinInput">Transaction PIN</label>
+      <input id="dataPurchasePinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter 4-digit PIN">
+    </div>
+    <p id="dataPurchasePinMessage" class="pin-prompt-message" aria-live="polite"></p>
+    <div class="pin-prompt-actions">
+      <button id="cancelDataPurchasePin" class="secondary-btn" type="button">Cancel</button>
+      <button id="confirmDataPurchasePin" class="primary-btn" type="button">Confirm purchase</button>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICE PURCHASE PIN PROMPT -->
+<div id="servicePurchasePinModal" class="modal-overlay">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="servicePurchasePinTitle">
+    <h2 id="servicePurchasePinTitle">Confirm purchase</h2>
+    <p id="servicePurchasePinDetails">Enter your transaction PIN to continue.</p>
+    <div class="form-group"><label for="servicePurchasePinInput">Transaction PIN</label><input id="servicePurchasePinInput" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter 4-digit PIN"></div>
+    <p id="servicePurchasePinMessage" class="pin-prompt-message" aria-live="polite"></p>
+    <div class="pin-prompt-actions"><button id="cancelServicePurchasePin" class="secondary-btn" type="button">Cancel</button><button id="confirmServicePurchasePin" class="primary-btn" type="button">Confirm purchase</button></div>
+  </div>
+</div>
 
 <!-- TRANSACTION PIN SETUP -->
 <div id="transactionPinModal" class="modal-overlay">
@@ -1329,6 +1422,9 @@
 
 </div>
 
+
+
+
 <!-- TOAST -->
 <div id="toast" class="toast"></div>
 
@@ -1340,9 +1436,9 @@
     <span>Home</span>
   </button>
 
-  <button class="bottom-nav-item" data-page="dataPage" type="button">
-    <span class="icon">▣</span>
-    <span>Data</span>
+  <button class="bottom-nav-item" data-page="marketplacePage" type="button" aria-label="Open MAMU Marketplace">
+    <span class="icon">🛍</span>
+    <span>Marketplace</span>
   </button>
 
   <button class="bottom-nav-item" data-page="fundPage" type="button">
@@ -1364,6 +1460,9 @@
 
 
 <script src="./js/app.js"></script>
+<script src="./js/marketplace-product-detail.js?v=hide-nav-1"></script>
+<script src="./js/marketplace.js"></script>
+<script src="./js/gsubz-extras.js"></script>
 
 <script>
   if ("serviceWorker" in navigator) {

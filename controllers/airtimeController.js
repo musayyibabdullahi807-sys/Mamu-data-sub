@@ -1,3 +1,4 @@
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Order = require("../models/Order");
 const Transaction = require("../models/Transaction");
@@ -15,9 +16,9 @@ const purchaseAirtime = async (req, res) => {
   let walletDeducted = false;
 
   try {
-    const { serviceID, amount, phone } = req.body;
+    const { serviceID, amount, phone, pin } = req.body;
 
-    if (!serviceID || amount === undefined || !phone) {
+    if (!serviceID || amount === undefined || !phone || !pin) {
       return res.status(400).json({
         success: false,
         message: "Service ID, amount and phone number are required",
@@ -54,6 +55,11 @@ const purchaseAirtime = async (req, res) => {
       });
     }
 
+    const cleanPin = String(pin).trim();
+    if (!/^\d{4}$/.test(cleanPin)) {
+      return res.status(400).json({ success: false, message: "Transaction PIN must contain exactly 4 digits" });
+    }
+
     const cleanPhone = String(phone).trim();
 
     if (!/^\d{10,15}$/.test(cleanPhone)) {
@@ -77,6 +83,13 @@ const purchaseAirtime = async (req, res) => {
         success: false,
         message: "Your account is not active",
       });
+    }
+
+    if (!user.transactionPinHash) {
+      return res.status(400).json({ success: false, message: "Transaction PIN has not been created. Please create one in Security settings." });
+    }
+    if (!(await bcrypt.compare(cleanPin, user.transactionPinHash))) {
+      return res.status(401).json({ success: false, message: "Incorrect transaction PIN" });
     }
 
     if (user.walletBalance < airtimeAmount) {
@@ -156,8 +169,9 @@ const purchaseAirtime = async (req, res) => {
     let providerResponse;
 
     try {
+      const providerServiceID = service === "9mobile" ? "etisalat" : service;
       providerResponse = await buyAirtime({
-        serviceID: service,
+        serviceID: providerServiceID,
         amount: airtimeAmount,
         phone: cleanPhone,
         requestID: reference,

@@ -14,6 +14,7 @@ const transactionSchema = new mongoose.Schema(
         "wallet_funding",
         "data_purchase",
         "airtime_purchase",
+        "gsubz_purchase",
         "bill_payment",
         "refund",
         "withdrawal",

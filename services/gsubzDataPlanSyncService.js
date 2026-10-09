@@ -3,17 +3,12 @@ const { getDataPlans } = require("./gsubzService");
 
 const GSUBZ_SERVICES = [
   { id: "mtn_sme", network: 1, networkName: "MTN" },
-  { id: "mtn_cg_lite", network: 1, networkName: "MTN" },
   { id: "mtn_gifting", network: 1, networkName: "MTN" },
-  { id: "mtn_coupon", network: 1, networkName: "MTN" },
-  { id: "mtncg", network: 1, networkName: "MTN" },
-
-  { id: "airtel_cg", network: 4, networkName: "AIRTEL" },
+  { id: "mtn_fibrex", network: 1, networkName: "MTN" },
+  { id: "airtel_gifting", network: 4, networkName: "AIRTEL" },
   { id: "airtel_sme", network: 4, networkName: "AIRTEL" },
-
   { id: "glo_data", network: 2, networkName: "GLO" },
   { id: "glo_sme", network: 2, networkName: "GLO" },
-
   { id: "etisalat_data", network: 3, networkName: "9MOBILE" },
 ];
 
@@ -102,6 +97,12 @@ const syncGSUBZDataPlans = async () => {
       );
     }
   }
+
+  const currentServiceIds = GSUBZ_SERVICES.map((service) => service.id);
+  await DataPlan.updateMany(
+    { planType: { $nin: currentServiceIds }, isActive: true },
+    { $set: { isActive: false } }
+  );
 
   return {
     total,

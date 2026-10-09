@@ -1,0 +1,62 @@
+#marketplacePage{padding:20px 16px 105px;background:var(--mamu-bg,#f6f8fc);color:var(--mamu-text,#111827)}
+.market-head{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.market-head h1{font-size:23px;line-height:1.2;color:var(--mamu-text,#111827);flex:1}
+.market-head p{font-size:12px;color:var(--mamu-muted,#6b7280);margin-top:4px}
+.market-search{display:flex;gap:8px;margin-bottom:18px}
+.market-search input,.market-form input,.market-form textarea{width:100%;border:1px solid var(--mamu-border,#e5e7eb);border-radius:12px;padding:12px;background:#fff;color:#111827;font:inherit}
+.market-search input:focus,.market-form input:focus,.market-form textarea:focus{outline:2px solid #bfdbfe;border-color:#2563eb}
+.market-button{border:0;border-radius:11px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:11px 14px;font-weight:750;cursor:pointer;white-space:nowrap}
+.market-button.secondary{background:#eff6ff;color:#1d4ed8}
+.market-menu-wrap{position:relative;margin-left:auto;flex:0 0 auto}
+.market-menu{position:absolute;right:0;top:48px;width:200px;padding:7px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 12px 28px #0f172a20;z-index:5}
+.market-menu button{width:100%;border:0;background:white;text-align:left;padding:11px;border-radius:8px;color:#111827;font:inherit;cursor:pointer}
+.market-menu button:hover{background:#eff6ff}
+.market-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.market-product{overflow:hidden;background:#fff;border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 5px 15px #0f172a0a}
+.market-product img,.market-no-image{width:100%;height:145px;object-fit:cover;background:#eff6ff}
+.market-no-image{display:grid;place-items:center;color:#6b7280;font-size:13px}
+.market-product-body{padding:12px}.market-product h3{font-size:14px;margin:0 0 7px}.market-price{color:#1d4ed8;font-weight:800}.market-meta{font-size:12px;line-height:1.45;color:#6b7280;margin-top:6px}
+.market-panel{margin-top:16px;padding:16px;background:white;border:1px solid #e5e7eb;border-radius:15px}
+.market-panel h2{font-size:18px;margin:0 0 13px}.market-form{display:grid;gap:10px}.market-form textarea{min-height:80px;resize:vertical}.market-note{font-size:13px;line-height:1.5;color:#475569;margin-top:10px}.market-status{padding:12px;text-align:center;color:#6b7280;font-size:13px}.market-message{font-size:13px;min-height:18px;color:#475569}.market-message.error{color:#dc2626}.market-message.success{color:#16a34a}.market-application{padding:11px;background:#eff6ff;border-radius:10px;font-size:13px;line-height:1.5;margin-bottom:12px}.market-admin-row{padding:12px;background:#f6f8fc;border-radius:10px;margin:9px 0;font-size:13px;line-height:1.5}.market-admin-row button{margin-top:8px;margin-right:6px}
+@media(min-width:700px){#marketplacePage{max-width:700px;margin:0 auto;padding-top:28px}.market-products{grid-template-columns:repeat(3,minmax(0,1fr))}.market-product img,.market-no-image{height:180px}}
+
+:root[data-theme="dark"] #marketplacePage .market-search input,
+:root[data-theme="dark"] #marketplacePage .market-form input,
+:root[data-theme="dark"] #marketplacePage .market-form textarea,
+:root[data-theme="dark"] #marketplacePage .market-panel,
+:root[data-theme="dark"] #marketplacePage .market-product,
+:root[data-theme="dark"] #marketplacePage .market-menu {
+  background: var(--mamu-surface, #111c2e);
+  color: var(--mamu-text, #e5e7eb);
+  border-color: var(--mamu-border, #29364a);
+}
+:root[data-theme="dark"] #marketplacePage .market-menu button { background: var(--mamu-surface, #111c2e); color: var(--mamu-text, #e5e7eb); }
+:root[data-theme="dark"] #marketplacePage .market-menu button:hover,
+:root[data-theme="dark"] #marketplacePage .market-admin-row,
+:root[data-theme="dark"] #marketplacePage .market-application { background: #17243a; color: #e5e7eb; }
+:root[data-theme="dark"] #marketplacePage .market-meta,
+:root[data-theme="dark"] #marketplacePage .market-note,
+:root[data-theme="dark"] #marketplacePage .market-status,
+:root[data-theme="dark"] #marketplacePage .market-message { color: #a0aec0; }
+:root[data-theme="dark"] #marketplacePage .market-search input,
+:root[data-theme="dark"] #marketplacePage .market-form input,
+:root[data-theme="dark"] #marketplacePage .market-form textarea { color: var(--mamu-text, #e5e7eb); }
+:root[data-theme="dark"] #marketplacePage .market-price { color: #60a5fa; }
+:root[data-theme="dark"] #marketplacePage .market-button.secondary { background: #1e3a5f; color: #bfdbfe; }
+.market-business-card{padding:13px;margin:10px 0;border:1px solid #e5e7eb;border-radius:12px;background:#fff}.market-business-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.market-business-card p{margin:8px 0;color:#64748b;font-size:13px}.market-business-card ul{margin:8px 0;padding-left:20px;font-size:13px}.market-business-card li{margin:5px 0}.market-business-status{padding:4px 9px;border-radius:999px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:700}.market-business-status.approved{background:#dcfce7;color:#166534}.market-business-status.rejected,.market-business-status.suspended{background:#fee2e2;color:#991b1b}
+:root[data-theme="dark"] #marketplacePage .market-business-card{background:var(--mamu-surface,#111c2e);border-color:#334155;color:var(--mamu-text,#e5e7eb)}
+:root[data-theme="dark"] #marketplacePage .market-business-card p{color:#a8b3c5}
+
+.market-upload-label{display:grid;gap:6px;font-size:13px;font-weight:600}.market-upload-label small{font-weight:400;color:#64748b}
+:root[data-theme="dark"] #marketplacePage .market-upload-label small{color:#a8b3c5}
+
+.market-media-actions{display:flex;gap:8px;flex-wrap:wrap}.market-media-actions .market-button{font-size:13px;padding:9px 12px}.market-product-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;background:#e5e7eb}.market-product-gallery img{width:100%;height:90px;object-fit:cover}.market-product-video{display:block;width:100%;max-height:260px;background:#111}
+
+.market-product{cursor:pointer}.market-video-cover{height:145px;display:grid;place-items:center;background:#111827;color:#fff;font-size:40px}.product-detail-page-content{max-width:700px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden}.product-detail-page-standalone .product-detail-page-content{max-width:680px}.detail-back{margin-bottom:14px;background:#eef2ff;color:#1e3a8a}.product-detail-viewer{position:relative;min-height:220px;background:#0f172a;display:flex;align-items:center;justify-content:center}.product-detail-media{width:100%;display:flex;align-items:center;justify-content:center;touch-action:pan-y}.product-detail-media img{display:block;width:100%;height:min(62vh,560px);object-fit:contain;background:#0f172a}.product-detail-media video{display:block;width:100%;max-height:62vh;background:#000}.product-detail-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:1;border:0;border-radius:50%;width:44px;height:44px;background:#111827aa;color:#fff;font-size:30px;line-height:1}.product-detail-arrow.previous{left:10px}.product-detail-arrow.next{right:10px}.product-detail-counter{text-align:center;padding:9px;color:#64748b;font-size:13px}.product-detail-info{padding:16px}.product-detail-info p{margin:8px 0;white-space:pre-wrap}.product-detail-empty{padding:80px 20px;color:#fff}
+:root[data-theme="dark"] .product-detail-page-content{background:var(--mamu-surface,#111c2e);border-color:#334155;color:var(--mamu-text,#e5e7eb)}:root[data-theme="dark"] .product-detail-counter{color:#a8b3c5}
+.product-detail-media-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch;padding:10px}.product-detail-photo-panel,.product-detail-video{min-width:0;overflow:hidden;border-radius:12px;background:#0f172a}.product-detail-viewer[hidden]{display:none}.product-detail-photo-panel .product-detail-viewer{min-height:220px;height:min(62vh,560px)}.product-detail-photo-panel .product-detail-media img{height:min(62vh,560px)}.product-detail-video{padding:0}.product-detail-video video{display:block;width:100%;height:min(62vh,560px);max-height:none;object-fit:contain;background:#000;border-radius:12px}.product-detail-counter{padding:7px}.product-detail-media-row:not(.has-photos){grid-template-columns:1fr}.product-detail-media-row:not(.has-video){grid-template-columns:1fr}.product-detail-media-row:not(.has-photos):not(.has-video){display:none}
+.product-delete-button{border:0;border-radius:10px;background:#b42336;color:#fff;padding:9px 13px;font-weight:700;cursor:pointer;white-space:nowrap}.product-delete-button:disabled{opacity:.6}.product-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.product-detail-heading h1{margin:0 0 6px}
+
+/* Keep product details snug under their header in both app and standalone marketplace. */
+.product-detail-page>.page-content{padding-top:0}
+.product-detail-page-standalone.wrap{margin-top:0;padding-top:8px}

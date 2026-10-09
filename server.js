@@ -22,6 +22,8 @@ const electricityRoutes = require("./routes/electricityRoutes");
 const authRoutes = require("./routes/authRoutes");
 const referralRoutes = require("./routes/referralRoutes");
 const securityRoutes = require("./routes/securityRoutes");
+const marketplaceRoutes = require("./routes/marketplaceRoutes");
+const gsubzExtraRoutes = require("./routes/gsubzExtraRoutes");
 
 // Security
 app.use(helmet());
@@ -58,6 +60,8 @@ app.use("/api/electricity", electricityRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/referral", referralRoutes);
 app.use("/api/security", securityRoutes);
+app.use("/api/marketplace", marketplaceRoutes);
+app.use("/api/services/gsubz", gsubzExtraRoutes);
 
 // Root
 app.get("/", (req, res) => {

@@ -1,3 +1,4 @@
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Order = require("../models/Order");
 const Transaction = require("../models/Transaction");
@@ -38,6 +39,7 @@ const purchaseTV = async (req, res) => {
     customerID,
     phone,
     email,
+    pin,
   } = req.body;
 
   if (!serviceID) {
@@ -98,6 +100,11 @@ const purchaseTV = async (req, res) => {
     });
   }
 
+  const cleanPin = String(pin || "").trim();
+  if (!/^\d{4}$/.test(cleanPin)) {
+    return res.status(400).json({ success: false, message: "Transaction PIN must contain exactly 4 digits" });
+  }
+
   if (!/^\d{10,15}$/.test(String(phone))) {
     return res.status(400).json({
       success: false,
@@ -119,6 +126,13 @@ const purchaseTV = async (req, res) => {
       success: false,
       message: "Account is not active",
     });
+  }
+
+  if (!user.transactionPinHash) {
+    return res.status(400).json({ success: false, message: "Transaction PIN has not been created. Please create one in Security settings." });
+  }
+  if (!(await bcrypt.compare(cleanPin, user.transactionPinHash))) {
+    return res.status(401).json({ success: false, message: "Incorrect transaction PIN" });
   }
 
   if (Number(user.walletBalance) < tvAmount) {

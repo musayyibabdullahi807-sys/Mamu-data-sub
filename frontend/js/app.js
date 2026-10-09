@@ -190,10 +190,9 @@ function showPage(page) {
     element.classList.toggle("active", buttonPage === page);
   });
 
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
+  window.scrollTo(0, 0);
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
 }
 
 function setupNavigation() {
@@ -209,11 +208,12 @@ function setupNavigation() {
 
       showPage(page);
 
-      if (page === "home") refreshHome();
+      if (page === "home" || page === "fund") refreshHome();
       if (page === "data") loadDataPlans();
       if (page === "transactions") loadTransactions();
       if (page === "referral") loadReferral();
       if (page === "profile") loadProfile();
+      if (page === "marketplace") window.refreshMarketplace?.();
     });
   });
 
@@ -235,6 +235,10 @@ function setupNavigation() {
    WALLET
    ========================================================= */
 
+async function refreshHome() {
+  return loadWallet();
+}
+
 async function loadWallet() {
   try {
     const data = await apiRequest("/wallet");
@@ -255,39 +259,36 @@ async function loadWallet() {
     }
 
     updateWalletBalance(balance);
+    return true;
   } catch (error) {
-    if (error.message !== "Unauthorized") {
-      console.error("Wallet error:", error.message);
-    }
+    if (error.message !== "Unauthorized") console.error("Wallet error:", error.message);
+    return false;
   }
 }
 
+let walletBalanceVisible = true;
 function updateWalletBalance(balance) {
-  const formatted = money(balance);
-
   if ($("walletBalance")) {
-    $("walletBalance").textContent = formatted;
+    $("walletBalance").textContent = walletBalanceVisible ? money(balance) : "₦••••••";
   }
 }
 function setupBalanceToggle() {
   const button = $("toggleBalance");
-
   if (!button) return;
-
-  let visible = true;
-
   button.addEventListener("click", () => {
-    const balance = currentUser?.walletBalance ?? 0;
-
-    visible = !visible;
-
-    if ($("walletBalance")) {
-      $("walletBalance").textContent = visible
-        ? money(balance)
-        : "₦••••••";
-    }
-
-    button.textContent = visible ? "👁" : "🙈";
+    walletBalanceVisible = !walletBalanceVisible;
+    updateWalletBalance(currentUser?.walletBalance ?? 0);
+    button.textContent = walletBalanceVisible ? "👁" : "🙈";
+  });
+}
+function setupWalletRefresh() {
+  const button = $("refreshWalletBalance");
+  if (!button) return;
+  button.addEventListener("click", async () => {
+    button.disabled = true; button.textContent = "…";
+    const updated = await loadWallet();
+    if (!updated) showToast("Unable to refresh wallet balance.", "error");
+    button.disabled = false; button.textContent = "↻";
   });
 }
 
@@ -317,6 +318,7 @@ function transactionLabel(type) {
     wallet_funding: "Wallet Funding",
     data_purchase: "Data Purchase",
     airtime_purchase: "Airtime Purchase",
+    gsubz_purchase: "Quick Service Purchase",
     bill_payment: "Bill Payment",
     refund: "Refund",
     withdrawal: "Withdrawal",
@@ -583,6 +585,7 @@ function renderPopularPlans() {
 
       if (select) {
         select.value = plan._id;
+        window.queueDataPurchasePinPrompt?.();
       }
     });
   });
@@ -680,6 +683,7 @@ function populateDataPlanSelect() {
           });
 
         card.classList.add("selected");
+        window.queueDataPurchasePinPrompt?.();
       });
 
       cardsContainer.appendChild(card);
@@ -820,104 +824,205 @@ Thank you for using MAMU DATA SUB.
    ========================================================= */
 
 function setupDataPurchase() {
-  const button = $("purchaseDataBtn");
+  const purchaseButton = $("purchaseDataBtn");
+  const modal = $("dataPurchasePinModal");
+  const pinInput = $("dataPurchasePinInput");
+  const pinMessage = $("dataPurchasePinMessage");
+  const confirmButton = $("confirmDataPurchasePin");
+  const loadingOverlay = $("dataPurchaseLoading");
+  let pendingPurchase = null;
+  let promptTimer = null;
 
-  if (!button) return;
+  if (!purchaseButton || !modal || !pinInput || !confirmButton) return;
 
-  button.addEventListener("click", async () => {
+  const openPinPrompt = () => {
+    clearTimeout(promptTimer);
+    loadingOverlay?.classList.remove("active");
     const phone = $("dataPhone")?.value.trim();
     const planId = $("dataPlan")?.value;
-    const pin = $("dataPin")?.value.trim();
-
-    const selectedPlan = allDataPlans.find(
-      (plan) => String(plan._id) === String(planId)
-    );
-
-    if (!phone || !planId || !pin) {
-      showToast(
-        "Please enter your phone, select a plan, and enter your PIN.",
-        "error"
-      );
+    if (!phone || !planId) {
+      showToast("Enter your phone number and select a data plan first.", "error");
       return;
     }
-
-    if (!/^\d{4}$/.test(pin)) {
-      showToast("Transaction PIN must be exactly 4 digits.", "error");
-      return;
-    }
-
     if (!/^\d{10,15}$/.test(phone)) {
       showToast("Please enter a valid phone number.", "error");
+      $("dataPhone")?.focus();
       return;
     }
 
-    try {
-      setButtonLoading(button, true);
+    const selectedPlan = allDataPlans.find((plan) => String(plan._id) === String(planId));
+    pendingPurchase = { phone, planId, selectedPlan };
+    const planName = selectedPlan?.plan || "Data Plan";
+    const amount = selectedPlan ? money(Number(selectedPlan.sellingPrice || 0)) : "—";
+    $("dataPurchasePinDetails").textContent = `${planName} · ${phone} · ${amount}. Enter your transaction PIN to continue.`;
+    pinInput.value = "";
+    pinMessage.textContent = "";
+    pinMessage.className = "pin-prompt-message";
+    modal.classList.add("active");
+    setTimeout(() => pinInput.focus(), 50);
+  };
 
+  const queuePinPrompt = (showValidation = true) => {
+    clearTimeout(promptTimer);
+    if (!$("dataPlan")?.value) return;
+    const phone = $("dataPhone")?.value.trim();
+    if (!/^\d{10,15}$/.test(phone || "")) {
+      loadingOverlay?.classList.remove("active");
+      if (showValidation) showToast("Enter a valid phone number to continue.", "error");
+      $("dataPhone")?.focus();
+      return;
+    }
+    loadingOverlay?.classList.add("active");
+    promptTimer = setTimeout(openPinPrompt, 2000);
+  };
+
+  window.queueDataPurchasePinPrompt = queuePinPrompt;
+  window.cancelDataPurchasePrompt = () => {
+    clearTimeout(promptTimer);
+    loadingOverlay?.classList.remove("active");
+    modal.classList.remove("active");
+    pendingPurchase = null;
+  };
+  purchaseButton.addEventListener("click", openPinPrompt);
+  $("dataPhone")?.addEventListener("input", () => {
+    if ($("dataPlan")?.value) queuePinPrompt(false);
+  });
+  $("dataPlan")?.addEventListener("change", queuePinPrompt);
+
+  $("cancelDataPurchasePin")?.addEventListener("click", () => {
+    clearTimeout(promptTimer);
+    loadingOverlay?.classList.remove("active");
+    modal.classList.remove("active");
+    pinInput.value = "";
+    pinMessage.textContent = "";
+    pendingPurchase = null;
+  });
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      clearTimeout(promptTimer);
+      loadingOverlay?.classList.remove("active");
+      modal.classList.remove("active");
+      pinInput.value = "";
+      pendingPurchase = null;
+    }
+  });
+
+  confirmButton.addEventListener("click", async () => {
+    const pin = pinInput.value.trim();
+    if (!pendingPurchase) return;
+    if (!/^\d{4}$/.test(pin)) {
+      pinMessage.textContent = "Transaction PIN must be exactly 4 digits.";
+      pinMessage.className = "pin-prompt-message error";
+      pinInput.focus();
+      return;
+    }
+
+    const { phone, planId, selectedPlan } = pendingPurchase;
+    setButtonLoading(confirmButton, true, "Processing...");
+    try {
       const data = await apiRequest("/data/purchase", {
         method: "POST",
-        body: JSON.stringify({
-          planId,
-          phone,
-          pin,
-        }),
+        body: JSON.stringify({ planId, phone, pin }),
       });
-
+      modal.classList.remove("active");
+      pendingPurchase = null;
       showPurchaseReceipt({
         status: data.status || "successful",
         phone,
-        network: selectedPlan
-          ? networkName(selectedPlan)
-          : "—",
-        plan: selectedPlan
-          ? selectedPlan.plan || "Data Plan"
-          : "Data Plan",
-        amount: selectedPlan
-          ? Number(selectedPlan.sellingPrice || 0)
-          : 0,
+        network: selectedPlan ? networkName(selectedPlan) : "—",
+        plan: selectedPlan?.plan || "Data Plan",
+        amount: selectedPlan ? Number(selectedPlan.sellingPrice || 0) : 0,
         reference: data.reference || "",
         providerReference: data.providerReference || "",
         walletBalance: Number(data.walletBalance || 0),
       });
-
-      showToast(
-        data.message || "Data purchase request submitted successfully.",
-        "success"
-      );
-
+      showToast(data.message || "Data purchase request submitted successfully.", "success");
       $("dataPhone").value = "";
       $("dataPlan").value = "";
-      $("dataPin").value = "";
-
       await refreshHome();
       await loadDataPlans();
-
     } catch (error) {
-
+      modal.classList.remove("active");
+      pendingPurchase = null;
       showPurchaseReceipt({
         status: error.status || "failed",
         phone,
-        network: selectedPlan
-          ? networkName(selectedPlan)
-          : "—",
-        plan: selectedPlan
-          ? selectedPlan.plan || "Data Plan"
-          : "Data Plan",
-        amount: selectedPlan
-          ? Number(selectedPlan.sellingPrice || 0)
-          : 0,
+        network: selectedPlan ? networkName(selectedPlan) : "—",
+        plan: selectedPlan?.plan || "Data Plan",
+        amount: selectedPlan ? Number(selectedPlan.sellingPrice || 0) : 0,
         reference: error.reference || "",
         providerReference: error.providerReference || "",
         walletBalance: Number(error.walletBalance || 0),
       });
-
-      showToast(
-        error.message || "Data purchase failed.",
-        "error"
-      );
-
+      showToast(error.message || "Data purchase failed.", "error");
     } finally {
-      setButtonLoading(button, false);
+      setButtonLoading(confirmButton, false, "Confirm purchase");
+    }
+  });
+}
+
+let pendingServicePurchaseAction = null;
+let servicePurchasePromptTimer = null;
+
+function scheduleServicePurchasePrompt({ ready, details, onConfirm }) {
+  const loading = $("dataPurchaseLoading");
+  const modal = $("servicePurchasePinModal");
+  clearTimeout(servicePurchasePromptTimer);
+  if (!ready || !modal) {
+    loading?.classList.remove("active");
+    pendingServicePurchaseAction = null;
+    return;
+  }
+  pendingServicePurchaseAction = onConfirm;
+  loading?.classList.add("active");
+  servicePurchasePromptTimer = setTimeout(() => {
+    loading?.classList.remove("active");
+    $("servicePurchasePinDetails").textContent = details;
+    $("servicePurchasePinInput").value = "";
+    $("servicePurchasePinMessage").textContent = "";
+    $("servicePurchasePinMessage").className = "pin-prompt-message";
+    modal.classList.add("active");
+    setTimeout(() => $("servicePurchasePinInput")?.focus(), 50);
+  }, 2000);
+}
+
+function setupServicePurchasePinPrompt() {
+  const modal = $("servicePurchasePinModal");
+  const pinInput = $("servicePurchasePinInput");
+  const message = $("servicePurchasePinMessage");
+  const confirm = $("confirmServicePurchasePin");
+  if (!modal || !pinInput || !confirm) return;
+
+  const close = () => {
+    clearTimeout(servicePurchasePromptTimer);
+    $("dataPurchaseLoading")?.classList.remove("active");
+    modal.classList.remove("active");
+    pinInput.value = "";
+    pendingServicePurchaseAction = null;
+  };
+  $("cancelServicePurchasePin")?.addEventListener("click", close);
+  modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
+  confirm.addEventListener("click", async () => {
+    const pin = pinInput.value.trim();
+    if (!/^\d{4}$/.test(pin)) {
+      message.textContent = "Transaction PIN must be exactly 4 digits.";
+      message.className = "pin-prompt-message error";
+      pinInput.focus();
+      return;
+    }
+    const action = pendingServicePurchaseAction;
+    if (!action) return;
+    confirm.disabled = true;
+    confirm.textContent = "Processing...";
+    try {
+      const completed = await action(pin);
+      if (completed !== false) close();
+    } catch (error) {
+      message.textContent = error.message || "Purchase failed. Please try again.";
+      message.className = "pin-prompt-message error";
+    } finally {
+      confirm.disabled = false;
+      confirm.textContent = "Confirm purchase";
     }
   });
 }
@@ -928,226 +1033,119 @@ function setupDataPurchase() {
 
 function setupAirtimePurchase() {
   const button = $("purchaseAirtimeBtn");
-
   if (!button) return;
-
   let selectedNetwork = "";
+
+  const maybePrompt = () => {
+    const phone = $("airtimePhone")?.value.trim() || "";
+    const amount = Number($("airtimeAmount")?.value);
+    const ready = !!selectedNetwork && /^\d{10,15}$/.test(phone) && amount >= 100 && amount <= 50000;
+    scheduleServicePurchasePrompt({
+      ready, details: `Airtime · ${phone} · ${money(amount)}`,
+      onConfirm: async (pin) => {
+        $("airtimePin").value = pin;
+        try {
+          setButtonLoading(button, true);
+          const data = await apiRequest("/airtime/purchase", { method:"POST", body:JSON.stringify({ serviceID:selectedNetwork, phone, amount, pin }) });
+          showToast(data.message || "Airtime purchase submitted successfully.", "success");
+          $("airtimePhone").value = ""; $("airtimeAmount").value = ""; $("airtimePin").value = "";
+          selectedNetwork = "";
+          document.querySelectorAll("[data-airtime-network]").forEach((item) => item.classList.remove("selected"));
+          await refreshHome(); await loadTransactions();
+          return true;
+        } catch (error) {
+          $("servicePurchasePinMessage").textContent = error.message || "Airtime purchase failed.";
+          $("servicePurchasePinMessage").className = "pin-prompt-message error";
+          return false;
+        }
+        finally { setButtonLoading(button, false); }
+      },
+    });
+  };
 
   document.querySelectorAll("[data-airtime-network]").forEach((card) => {
     card.addEventListener("click", () => {
       selectedNetwork = card.dataset.airtimeNetwork || "";
-
-      document
-        .querySelectorAll("[data-airtime-network]")
-        .forEach((item) => item.classList.remove("selected"));
-
+      document.querySelectorAll("[data-airtime-network]").forEach((item) => item.classList.remove("selected"));
       card.classList.add("selected");
+      maybePrompt();
     });
   });
-
-  button.addEventListener("click", async () => {
-    const phone = $("airtimePhone")?.value.trim();
-    const amount = Number($("airtimeAmount")?.value);
-    const pin = $("airtimePin")?.value.trim();
-
-    if (!selectedNetwork || !phone || !amount || !pin) {
-      showToast(
-        "Please select a network and complete all airtime fields.",
-        "error"
-      );
-      return;
-    }
-
-    if (!/^\d{4}$/.test(pin)) {
-      showToast("Transaction PIN must be exactly 4 digits.", "error");
-      return;
-    }
-
-    if (!/^\d{10,15}$/.test(phone)) {
-      showToast("Please enter a valid phone number.", "error");
-      return;
-    }
-
-    if (amount < 100 || amount > 50000) {
-      showToast(
-        "Airtime amount must be between ₦100 and ₦50,000.",
-        "error"
-      );
-      return;
-    }
-
-    try {
-      setButtonLoading(button, true);
-
-      const data = await apiRequest("/airtime/purchase", {
-        method: "POST",
-        body: JSON.stringify({
-          serviceID: selectedNetwork,
-          phone,
-          amount,
-          pin,
-        }),
-      });
-
-      showToast(
-        data.message || "Airtime purchase submitted successfully.",
-        "success"
-      );
-
-      $("airtimePhone").value = "";
-      $("airtimeAmount").value = "";
-      $("airtimePin").value = "";
-
-      selectedNetwork = "";
-
-      document
-        .querySelectorAll("[data-airtime-network]")
-        .forEach((item) => item.classList.remove("selected"));
-
-      await refreshHome();
-      await loadTransactions();
-
-    } catch (error) {
-      showToast(
-        error.message || "Airtime purchase failed.",
-        "error"
-      );
-    } finally {
-      setButtonLoading(button, false);
-    }
-  });
+  ["airtimePhone", "airtimeAmount"].forEach((id) => $(id)?.addEventListener("input", maybePrompt));
 }
 
 /* =========================================================
    ELECTRICITY
    ========================================================= */
-   
 function setupElectricityPayment() {
   const button = $("payElectricityBtn");
-
   if (!button) return;
-
-  button.addEventListener("click", async () => {
-    const serviceID = $("electricityProvider")?.value;
-    const customerID = $("electricityCustomer")?.value.trim();
-    const phone = $("electricityPhone")?.value.trim();
+  const maybePrompt = () => {
+    const serviceID = $("electricityProvider")?.value || "";
+    const customerID = $("electricityCustomer")?.value.trim() || "";
+    const phone = $("electricityPhone")?.value.trim() || "";
     const amount = Number($("electricityAmount")?.value);
-
-    if (!serviceID || !customerID || !phone || !amount) {
-      showToast("Please complete all electricity fields.", "error");
-      return;
-    }
-
-    if (!/^\d{5,30}$/.test(customerID)) {
-      showToast("Please enter a valid customer number.", "error");
-      return;
-    }
-
-    if (!/^\d{10,15}$/.test(phone)) {
-      showToast("Please enter a valid phone number.", "error");
-      return;
-    }
-
-    if (amount < 100) {
-      showToast("Electricity amount must be at least ₦100.", "error");
-      return;
-    }
-
-    try {
-      setButtonLoading(button, true);
-
-      const data = await apiRequest("/electricity/purchase", {
-        method: "POST",
-        body: JSON.stringify({
-          serviceID,
-          customerID,
-          phone,
-          amount,
-        }),
-      });
-
-      showToast(
-        data.message || "Electricity payment submitted successfully.",
-        "success"
-      );
-
-      $("electricityCustomer").value = "";
-      $("electricityPhone").value = "";
-      $("electricityAmount").value = "";
-
-      await refreshHome();
-    } catch (error) {
-      showToast(error.message || "Electricity payment failed.", "error");
-    } finally {
-      setButtonLoading(button, false);
-    }
+    const ready = !!serviceID && /^\d{5,30}$/.test(customerID) && /^\d{10,15}$/.test(phone) && amount >= 100;
+    scheduleServicePurchasePrompt({
+      ready, details:`Electricity · ${customerID} · ${money(amount)}`,
+      onConfirm: async (pin) => {
+        $("electricityPin").value = pin;
+        try {
+          setButtonLoading(button, true);
+          const data = await apiRequest("/electricity/purchase", { method:"POST", body:JSON.stringify({ serviceID, customerID, phone, amount, pin }) });
+          showToast(data.message || "Electricity payment submitted successfully.", "success");
+          $("electricityCustomer").value = ""; $("electricityPhone").value = ""; $("electricityAmount").value = ""; $("electricityPin").value = "";
+          await refreshHome();
+          return true;
+        } catch (error) {
+          $("servicePurchasePinMessage").textContent = error.message || "Electricity payment failed.";
+          $("servicePurchasePinMessage").className = "pin-prompt-message error";
+          return false;
+        }
+        finally { setButtonLoading(button, false); }
+      },
+    });
+  };
+  ["electricityProvider", "electricityCustomer", "electricityPhone", "electricityAmount"].forEach((id) => {
+    $(id)?.addEventListener(id === "electricityProvider" ? "change" : "input", maybePrompt);
   });
 }
+
 /* =========================================================
    TV
    ========================================================= */
-
 function setupTVPayment() {
   const button = $("payTvBtn");
-
   if (!button) return;
-
-  button.addEventListener("click", async () => {
-    const serviceID = $("tvProvider")?.value;
-    const customerID = $("tvCustomer")?.value.trim();
-    const phone = $("tvPhone")?.value.trim();
-    const plan = $("tvPlan")?.value;
+  const maybePrompt = () => {
+    const serviceID = $("tvProvider")?.value || "";
+    const customerID = $("tvCustomer")?.value.trim() || "";
+    const phone = $("tvPhone")?.value.trim() || "";
+    const plan = $("tvPlan")?.value || "";
     const amount = Number($("tvAmount")?.value);
-
-    if (!serviceID || !customerID || !phone || !plan || !amount) {
-      showToast("Please complete all TV fields.", "error");
-      return;
-    }
-
-    if (!/^\d{5,30}$/.test(customerID)) {
-      showToast("Please enter a valid SmartCard or IUC number.", "error");
-      return;
-    }
-
-    if (!/^\d{10,15}$/.test(phone)) {
-      showToast("Please enter a valid phone number.", "error");
-      return;
-    }
-
-    if (amount <= 0) {
-      showToast("Please enter a valid amount.", "error");
-      return;
-    }
-
-    try {
-      setButtonLoading(button, true);
-
-      const data = await apiRequest("/tv/purchase", {
-        method: "POST",
-        body: JSON.stringify({
-          serviceID,
-          customerID,
-          phone,
-          plan,
-          amount,
-        }),
-      });
-
-      showToast(
-        data.message || "TV subscription submitted successfully.",
-        "success"
-      );
-
-      $("tvCustomer").value = "";
-      $("tvPhone").value = "";
-      $("tvAmount").value = "";
-
-      await refreshHome();
-    } catch (error) {
-      showToast(error.message || "TV payment failed.", "error");
-    } finally {
-      setButtonLoading(button, false);
-    }
+    const ready = !!serviceID && /^\d{5,30}$/.test(customerID) && /^\d{10,15}$/.test(phone) && !!plan && amount > 0;
+    scheduleServicePurchasePrompt({
+      ready, details:`TV subscription · ${customerID} · ${money(amount)}`,
+      onConfirm: async (pin) => {
+        $("tvPin").value = pin;
+        try {
+          setButtonLoading(button, true);
+          const data = await apiRequest("/tv/purchase", { method:"POST", body:JSON.stringify({ serviceID, customerID, phone, plan, amount, pin }) });
+          showToast(data.message || "TV subscription submitted successfully.", "success");
+          $("tvCustomer").value = ""; $("tvPhone").value = ""; $("tvAmount").value = ""; $("tvPin").value = "";
+          await refreshHome();
+          return true;
+        } catch (error) {
+          $("servicePurchasePinMessage").textContent = error.message || "TV payment failed.";
+          $("servicePurchasePinMessage").className = "pin-prompt-message error";
+          return false;
+        }
+        finally { setButtonLoading(button, false); }
+      },
+    });
+  };
+  ["tvProvider", "tvCustomer", "tvPhone", "tvPlan", "tvAmount"].forEach((id) => {
+    $(id)?.addEventListener(["tvProvider", "tvPlan"].includes(id) ? "change" : "input", maybePrompt);
   });
 }
 /* =========================================================
@@ -1162,6 +1160,7 @@ async function loadProfile() {
     }
 
     currentUser = data.user;
+    updateWalletBalance(currentUser.walletBalance ?? 0);
 
 updateProfileUI(currentUser);
 updateDashboardHeader();
@@ -1225,6 +1224,9 @@ function updateProfileUI(user) {
   const accountTypeInput =
     $("profileAccountTypeInput");
 
+  const accountIdInput =
+    $("profileAccountIdInput");
+
   const profileName =
     $("profileName");
 
@@ -1257,6 +1259,11 @@ function updateProfileUI(user) {
   if (accountTypeInput) {
     accountTypeInput.value = accountType;
     accountTypeInput.readOnly = true;
+  }
+
+  if (accountIdInput) {
+    accountIdInput.value = user.id || "";
+    accountIdInput.readOnly = true;
   }
 
   if (stateInput) {
@@ -1562,6 +1569,16 @@ function setupSignOut() {
 }
 
 function setupSettings() {
+  const darkModeToggle = $("settingsDarkModeToggle");
+  const applyTheme = (dark) => {
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    try { localStorage.setItem("mamu_theme", dark ? "dark" : "light"); } catch (_) {}
+  };
+  if (darkModeToggle) {
+    darkModeToggle.checked = localStorage.getItem("mamu_theme") === "dark";
+    darkModeToggle.addEventListener("change", () => applyTheme(darkModeToggle.checked));
+  }
+
   $("settingsTransactionPinBtn")?.addEventListener("click", () => {
     $("resetTransactionPinBtn")?.click();
   });
@@ -1579,8 +1596,9 @@ function setupSettings() {
 function setupComingSoonServices() {
   document.querySelectorAll(".service-card[data-service]").forEach((card) => {
     card.addEventListener("click", () => {
-      const name = card.querySelector("strong")?.textContent || "This service";
-      showToast(`${name} is coming soon.`, "success");
+      const service = card.dataset.service;
+      if (window.openGsubzQuickService) window.openGsubzQuickService(service);
+      else showToast("Service page is still loading. Try again.", "error");
     });
   });
 }
@@ -1808,9 +1826,11 @@ async function initApp() {
 
   setupNavigation();
   setupBalanceToggle();
+  setupWalletRefresh();
   setupSideMenu();
 
   setupDataPurchase();
+  setupServicePurchasePinPrompt();
   setupPurchaseReceipt();  
   setupDataNetworkCards();
   setupAirtimePurchase();
@@ -1819,6 +1839,17 @@ async function initApp() {
 
   setupProfileUpdate();
   setupProfilePhoto();
+  $("copyMarketplaceAccountId")?.addEventListener("click", async () => {
+    const input = $("profileAccountIdInput");
+    if (!input?.value) { showToast("Account ID is not available yet.", "error"); return; }
+    try {
+      await navigator.clipboard.writeText(input.value);
+      showToast("Account ID copied.", "success");
+    } catch (_) {
+      input.focus(); input.select();
+      showToast("Select and copy your Account ID.", "success");
+    }
+  });
   setupReferralCopy();
  
 async function handlePaystackCallback() {
@@ -1845,6 +1876,8 @@ if (!reference) {
       );
 
       await loadProfile();
+      await refreshHome();
+      await loadTransactions();
 
       window.history.replaceState(
         {},

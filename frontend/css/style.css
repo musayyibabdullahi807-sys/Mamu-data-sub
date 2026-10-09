@@ -220,6 +220,15 @@ select:focus {
   font-size: 12px;
 }
 
+.balance-refresh {
+  background: transparent;
+  color: var(--black);
+  font-size: 18px;
+  font-weight: 800;
+  padding: 2px 8px;
+}
+.balance-refresh:disabled { opacity: .55; }
+
 .balance-toggle {
   background: transparent;
   color: var(--black);
@@ -3116,3 +3125,138 @@ textarea:focus {
   }
 }
 
+
+/* Marketplace navigation uses normal links so the app security policy allows it. */
+.marketplace-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Keep every in-app page header on the dashboard brand gradient. */
+.inner-header {
+  background: linear-gradient(135deg, var(--mamu-primary-dark), var(--mamu-primary));
+  color: #fff;
+}
+
+.inner-header p {
+  color: rgba(255, 255, 255, .78);
+}
+
+.inner-header .back-btn {
+  background: rgba(255, 255, 255, .16);
+  border: 1px solid rgba(255, 255, 255, .24);
+  color: #fff;
+}
+
+.pin-prompt-message {
+  min-height: 18px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--mamu-muted);
+}
+
+.pin-prompt-message.error { color: var(--mamu-danger); }
+.pin-prompt-actions { display: flex; gap: 10px; margin-top: 14px; }
+.pin-prompt-actions button { flex: 1; }
+
+.purchase-loading-box { text-align: center; padding: 26px 22px; }
+.purchase-loading-box h2 { margin-top: 14px; color: var(--mamu-text); }
+.purchase-loading-box > p { color: var(--mamu-muted); }
+.purchase-spinner { display: inline-block; width: 38px; height: 38px; border: 4px solid var(--mamu-primary-soft); border-top-color: var(--mamu-primary); border-radius: 50%; animation: mamu-purchase-spin .8s linear infinite; }
+@keyframes mamu-purchase-spin { to { transform: rotate(360deg); } }
+
+.purchase-flow-hint { margin-top: 14px; color: var(--mamu-muted); font-size: 12px; line-height: 1.45; text-align: center; }
+
+/* User-selected dark appearance */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --white: #111c2e;
+  --text: #e5e7eb;
+  --muted: #a0aec0;
+  --border: #29364a;
+  --soft: #1b2940;
+  --mamu-bg: #0b1220;
+  --mamu-surface: #111c2e;
+  --mamu-text: #e5e7eb;
+  --mamu-muted: #a0aec0;
+  --mamu-border: #29364a;
+  --mamu-primary-soft: #172b4d;
+  --mamu-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+  --mamu-shadow-hover: 0 14px 30px rgba(0, 0, 0, .4);
+}
+
+:root[data-theme="dark"] html,
+:root[data-theme="dark"] body,
+:root[data-theme="dark"] #app,
+:root[data-theme="dark"] .page,
+:root[data-theme="dark"] .page-content {
+  background-color: var(--mamu-bg);
+  color: var(--mamu-text);
+}
+
+:root[data-theme="dark"] :is(.virtual-card, .service-card, .form-card, .profile-card, .referral-card, .stat-card, .transaction-item, .education-item, .section-block, .whatsapp-options-card, .settings-item, .data-plan-card, .plan-card, .popular-plan-card, .network-card, .bottom-nav, .side-menu, .modal-box, .fund-option) {
+  background: var(--mamu-surface);
+  color: var(--mamu-text);
+  border-color: var(--mamu-border);
+  box-shadow: var(--mamu-shadow);
+}
+
+:root[data-theme="dark"] :is(h1, h2, h3, h4, p, label, .section-heading, .settings-item-content strong, .data-plan-card, .plan-card, .transaction-item, .education-item) {
+  color: var(--mamu-text);
+}
+
+:root[data-theme="dark"] :is(small, .muted, .settings-item-content small, .details, .description, .helper-text, .section-subtitle) {
+  color: var(--mamu-muted);
+}
+
+:root[data-theme="dark"] :is(input, select, textarea) {
+  background-color: #0f1929;
+  color: var(--mamu-text);
+  border-color: var(--mamu-border);
+}
+
+:root[data-theme="dark"] :is(.inner-header, .settings-list, .transactions-list, .education-list, .network-selector, .data-plan-section) {
+  color: var(--mamu-text);
+}
+
+:root[data-theme="dark"] .bottom-nav-item { color: #cbd5e1; }
+:root[data-theme="dark"] .bottom-nav-item.active { color: #60a5fa; }
+:root[data-theme="dark"] .settings-item-content strong { color: var(--mamu-text); }
+:root[data-theme="dark"] .settings-theme-toggle input { accent-color: #2563eb; }
+.settings-theme-toggle input[type="checkbox"] {
+  width: 44px;
+  height: 24px;
+  padding: 0;
+  flex: 0 0 44px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+:root[data-theme="dark"] :is(.transaction-info strong, .transaction-amount, .whatsapp-option-content strong, .settings-item-content strong, .inner-header h2, .inner-header p) {
+  color: var(--mamu-text);
+}
+:root[data-theme="dark"] :is(.transaction-info span, .whatsapp-option-content small, .settings-item-content small) {
+  color: var(--mamu-muted);
+}
+:root[data-theme="dark"] .settings-item {
+  background: var(--mamu-surface);
+  border-color: var(--mamu-border);
+  box-shadow: var(--mamu-shadow);
+}
+:root[data-theme="dark"] .settings-theme-toggle input[type="checkbox"] {
+  color-scheme: dark;
+}
+.quick-service-form { display:grid; gap:13px; }
+.quick-service-form label { display:grid; gap:7px; color:var(--mamu-text); font-size:13px; font-weight:700; }
+.quick-service-form input,.quick-service-form select,.quick-service-form textarea { width:100%; border:1px solid var(--mamu-border); border-radius:12px; background:var(--mamu-surface); color:var(--mamu-text); padding:12px 13px; font:inherit; }
+.quick-service-note { color:var(--mamu-muted); font-size:12px; line-height:1.5; }
+.quick-service-status { margin-top:12px; color:var(--mamu-muted); font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+.quick-service-status.error { color:var(--mamu-danger); }
+.quick-service-status.success { color:var(--mamu-success); }
+.quick-service-result { margin-top:10px; padding:12px; border-radius:12px; background:var(--mamu-primary-soft); color:var(--mamu-text); }
+.quick-service-result p { margin:8px 0; font-size:12px; overflow-wrap:anywhere; }
+:root[data-theme="dark"] .quick-service-result { background:#17243a; color:var(--mamu-text); }
+
+.bottom-nav.product-detail-hidden{display:none!important}

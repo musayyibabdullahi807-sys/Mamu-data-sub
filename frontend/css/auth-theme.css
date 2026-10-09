@@ -1,0 +1,44 @@
+:root {
+  --mamu-primary: #2563eb;
+  --mamu-primary-dark: #1d4ed8;
+  --mamu-primary-soft: #eff6ff;
+  --mamu-accent: #06b6d4;
+  --mamu-bg: #f6f8fc;
+  --mamu-surface: #ffffff;
+  --mamu-text: #111827;
+  --mamu-muted: #6b7280;
+  --mamu-border: #e5e7eb;
+}
+
+html, body { background: var(--mamu-bg); color: var(--mamu-text); }
+body { background-color: var(--mamu-bg); }
+.top-section, .hero {
+  background: linear-gradient(135deg, var(--mamu-primary-dark), var(--mamu-primary));
+  color: #fff;
+}
+.brand-logo, .brand-mark {
+  background: rgba(255,255,255,.16);
+  border-color: rgba(255,255,255,.42);
+  color: #fff;
+}
+.brand p, .brand-sub, .secure, .hero-title p { color: rgba(255,255,255,.78); }
+.login-card, .signup-card {
+  background: var(--mamu-surface);
+  border-color: var(--mamu-border);
+  box-shadow: 0 12px 32px rgba(15,23,42,.09);
+}
+.input-wrapper input, .password-input, .phone-input {
+  border-color: var(--mamu-border);
+  background: #fff;
+  color: var(--mamu-text);
+}
+.input-wrapper input:focus, .password-input:focus, .phone-input:focus {
+  border-color: var(--mamu-primary);
+  box-shadow: 0 0 0 3px var(--mamu-primary-soft);
+}
+.login-btn, .signup-btn {
+  background: linear-gradient(135deg, var(--mamu-primary), var(--mamu-primary-dark));
+  color: #fff;
+}
+.login-btn:active, .signup-btn:active { background: var(--mamu-primary-dark); }
+.footer a, .login-footer a, .signup-footer a { color: var(--mamu-primary); }

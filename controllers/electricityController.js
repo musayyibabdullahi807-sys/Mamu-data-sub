@@ -1,3 +1,4 @@
+const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Order = require("../models/Order");
 const Transaction = require("../models/Transaction");
@@ -20,9 +21,10 @@ const purchaseElectricity = async (req, res) => {
       customerID,
       phone,
       plan,
+      pin,
     } = req.body;
 
-    if (!serviceID || amount === undefined || !customerID || !phone) {
+    if (!serviceID || amount === undefined || !customerID || !phone || !pin) {
       return res.status(400).json({
         success: false,
         message:
@@ -63,6 +65,11 @@ const purchaseElectricity = async (req, res) => {
       });
     }
 
+    const cleanPin = String(pin).trim();
+    if (!/^\d{4}$/.test(cleanPin)) {
+      return res.status(400).json({ success: false, message: "Transaction PIN must contain exactly 4 digits" });
+    }
+
     const cleanCustomerID = String(customerID).trim();
     const cleanPhone = String(phone).trim();
 
@@ -94,6 +101,13 @@ const purchaseElectricity = async (req, res) => {
         success: false,
         message: "Your account is not active",
       });
+    }
+
+    if (!user.transactionPinHash) {
+      return res.status(400).json({ success: false, message: "Transaction PIN has not been created. Please create one in Security settings." });
+    }
+    if (!(await bcrypt.compare(cleanPin, user.transactionPinHash))) {
+      return res.status(401).json({ success: false, message: "Incorrect transaction PIN" });
     }
 
     if (user.walletBalance < electricityAmount) {
