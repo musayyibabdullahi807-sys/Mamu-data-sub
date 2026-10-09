@@ -61,4 +61,4 @@
 .product-detail-page>.page-content{padding-top:0}
 .product-detail-page-standalone.wrap{margin-top:0;padding-top:8px}
 
-#settingsMarketplaceAdminBtn[hidden], #marketAdminLink[hidden], .admin-wrap[hidden] { display:none !important; }
+#settingsMarketplaceAdminBtn[hidden], #marketAdminLink[hidden], #marketAdminSection[hidden], #admin-section[hidden], .admin-wrap[hidden] { display:none !important; }

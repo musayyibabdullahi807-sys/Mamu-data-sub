@@ -3261,7 +3261,5 @@ textarea:focus {
 
 .bottom-nav.product-detail-hidden{display:none!important}
 
-/* Keep admin entry points hidden until the server confirms admin access. */
-#settingsMarketplaceAdminBtn[hidden], #marketAdminLink[hidden] { display:none !important; }
 
-#settingsMarketplaceAdminBtn[hidden], #marketAdminLink[hidden], .admin-wrap[hidden] { display:none !important; }
+#settingsMarketplaceAdminBtn[hidden], #marketAdminLink[hidden], #marketAdminSection[hidden], #admin-section[hidden], .admin-wrap[hidden] { display:none !important; }
