@@ -10,9 +10,10 @@ const User = require("../models/User");
 
 const router = express.Router();
 const text = (value, max) => typeof value === "string" ? value.trim().slice(0, max) : "";
+const MARKETPLACE_ADMIN_USER_ID = "6ab274d7c6cacf9e61d034f6";
 const adminOnly = (req, res, next) => {
-  const adminId = process.env.MAMU_MARKETPLACE_ADMIN_USER_ID;
-  if (!adminId || String(req.user._id) !== adminId) return res.status(403).json({ success: false, message: "Marketplace administrator access required" });
+  const userId = String(req.user?._id || "").trim().toLowerCase();
+  if (userId !== MARKETPLACE_ADMIN_USER_ID) return res.status(403).json({ success: false, message: "Marketplace administrator access required" });
   next();
 };
 let ownerIndexMigration;

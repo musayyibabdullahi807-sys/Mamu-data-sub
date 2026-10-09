@@ -73,7 +73,20 @@
       await loadApplications();
     } catch (error) { button.disabled = false; button.textContent = "Retry"; window.alert(error.message); }
   });
-  loadApplications();
-  loadUsers();
-  window.setInterval(() => { if (!document.hidden) loadUsers(); }, 30000);
+  async function initializeAdminPanel() {
+    if (!token()) { window.location.replace("/index.html"); return; }
+    try {
+      const response = await fetch("/api/marketplace/admin/seller-applications?status=all", { headers:{ Authorization:`Bearer ${token()}` } });
+      if (!response.ok) { window.location.replace("/index.html"); return; }
+      const data = await response.json();
+      allApplications = data.sellers || [];
+      document.querySelector(".admin-wrap").hidden = false;
+      renderApplications();
+      await loadUsers();
+      window.setInterval(() => { if (!document.hidden) loadUsers(); }, 30000);
+    } catch (_) {
+      window.location.replace("/index.html");
+    }
+  }
+  initializeAdminPanel();
 })();

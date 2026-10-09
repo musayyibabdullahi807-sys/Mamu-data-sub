@@ -60,3 +60,5 @@
 /* Keep product details snug under their header in both app and standalone marketplace. */
 .product-detail-page>.page-content{padding-top:0}
 .product-detail-page-standalone.wrap{margin-top:0;padding-top:8px}
+
+#settingsMarketplaceAdminBtn[hidden], #marketAdminLink[hidden], .admin-wrap[hidden] { display:none !important; }

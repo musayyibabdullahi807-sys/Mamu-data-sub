@@ -18,7 +18,7 @@
   </style>
 </head>
 <body>
-  <main class="admin-wrap">
+  <main class="admin-wrap" hidden>
     <header class="admin-head"><a href="/index.html" aria-label="Back to MAMU">‹</a><div><h1>MAMU Marketplace Admin</h1><p>Review business applications and their history</p></div></header>
     <div class="toolbar"><select id="status-filter" aria-label="Filter applications"><option value="all">All applications</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="suspended">Suspended</option></select><button id="reload">Refresh applications</button></div>
     <section class="stats"><div class="stat"><span>Total</span><strong id="count-all">—</strong></div><div class="stat"><span>Pending</span><strong id="count-pending">—</strong></div><div class="stat"><span>Approved</span><strong id="count-approved">—</strong></div><div class="stat"><span>Rejected</span><strong id="count-rejected">—</strong></div></section>
@@ -29,6 +29,6 @@
     <section id="registered-users" aria-live="polite"><div class="status">Loading registered users...</div></section>
     <div class="toolbar" style="justify-content:space-between"><button id="users-prev">Previous</button><span id="users-page" style="color:#64748b"></span><button id="users-next">Next</button></div>
   </main>
-  <script src="/js/marketplace-admin.js"></script>
+  <script src="/js/marketplace-admin.js?v=admin-gate-2"></script>
 </body>
 </html>
