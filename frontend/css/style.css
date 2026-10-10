@@ -3307,3 +3307,7 @@ html[data-app-lock-required="true"] .app-lock-screen { display:flex; }
 @keyframes pull-refresh-spin { to { transform:rotate(360deg); } }
 html[data-theme="dark"] .pull-refresh-indicator { background:#111c2e; color:#e5e7eb; border-color:#29364a; }
 html[data-theme="dark"] .pull-refresh-spinner { border-color:#475569; border-top-color:#60a5fa; }
+
+.network-card { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px 4px 8px; }
+.network-logo { position:relative; z-index:1; display:block; width:40px; height:34px; object-fit:contain; }
+.network-card .network-name { font-size:10px; line-height:1.1; }

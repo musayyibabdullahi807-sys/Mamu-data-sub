@@ -1,11 +1,15 @@
-const CACHE_NAME = "mamu-data-sub-v8";
+const CACHE_NAME = "mamu-data-sub-v9";
 
 const APP_FILES = [
   "/",
   "/index.html",
   "/manifest.json",
   "/css/style.css",
-  "/js/app.js"
+  "/js/app.js",
+  "/assets/network-logos/mtn.svg",
+  "/assets/network-logos/airtel.svg",
+  "/assets/network-logos/glo.svg",
+  "/assets/network-logos/9mobile.svg"
 ];
 
 self.addEventListener("install", (event) => {
