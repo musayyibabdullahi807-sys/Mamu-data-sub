@@ -5,6 +5,20 @@
 
 const API_BASE = "/api";
 const TOKEN_KEY = "mamu_token";
+const THEME_KEY = "mamu_theme";
+const APP_LOCK_KEY = "mamu_app_locked_at";
+const APP_LOCK_STATE_KEY = "mamu_app_is_locked";
+const APP_LOCK_DELAY = 6 * 1000;
+
+function applySavedTheme() {
+  let dark = false;
+  try { dark = localStorage.getItem(THEME_KEY) === "dark"; } catch (_) {}
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  const toggle = document.getElementById("settingsDarkModeToggle");
+  if (toggle) toggle.checked = dark;
+}
+
+applySavedTheme();
 
 let currentUser = null;
 let allDataPlans = [];
@@ -275,21 +289,84 @@ function updateWalletBalance(balance) {
 function setupBalanceToggle() {
   const button = $("toggleBalance");
   if (!button) return;
+  const icon = (visible) => visible
+    ? '<svg class="balance-eye-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg>'
+    : '<svg class="balance-eye-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 3 18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a16 16 0 0 1-3.1 3.7M6.2 6.3C3.8 8 2.5 12 2.5 12s3.4 6 9.5 6a10 10 0 0 0 3.6-.7"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+  const paint = () => {
+    const label = walletBalanceVisible ? "Hide balance" : "Show balance";
+    button.innerHTML = icon(walletBalanceVisible);
+    button.setAttribute("aria-label", label);
+    button.title = label;
+  };
+  paint();
   button.addEventListener("click", () => {
     walletBalanceVisible = !walletBalanceVisible;
     updateWalletBalance(currentUser?.walletBalance ?? 0);
-    button.textContent = walletBalanceVisible ? "👁" : "🙈";
+    paint();
   });
 }
-function setupWalletRefresh() {
-  const button = $("refreshWalletBalance");
-  if (!button) return;
-  button.addEventListener("click", async () => {
-    button.disabled = true; button.textContent = "…";
-    const updated = await loadWallet();
-    if (!updated) showToast("Unable to refresh wallet balance.", "error");
-    button.disabled = false; button.textContent = "↻";
-  });
+
+function setupPullToRefresh() {
+  const home = $("homePage");
+  const indicator = $("pullRefreshIndicator");
+  const label = $("pullRefreshLabel");
+  if (!home || !indicator || !label) return;
+
+  const threshold = 72;
+  let startY = 0;
+  let distance = 0;
+  let pulling = false;
+  let refreshing = false;
+  const show = (value) => {
+    indicator.setAttribute("aria-hidden", String(!value));
+    indicator.classList.toggle("visible", value);
+  };
+  const reset = () => {
+    pulling = false;
+    distance = 0;
+    home.classList.remove("pulling");
+    indicator.style.setProperty("--pull-offset", "0px");
+    indicator.classList.remove("armed", "refreshing");
+    label.textContent = "Pull to refresh";
+    show(false);
+  };
+
+  home.addEventListener("touchstart", (event) => {
+    if (!home.classList.contains("active") || refreshing || window.scrollY > 0 || !event.touches.length) return;
+    startY = event.touches[0].clientY;
+    pulling = true;
+  }, { passive: true });
+
+  home.addEventListener("touchmove", (event) => {
+    if (!pulling || refreshing || !event.touches.length) return;
+    distance = Math.max(0, Math.min(event.touches[0].clientY - startY, 110));
+    if (distance <= 0) return;
+    event.preventDefault();
+    home.classList.add("pulling");
+    indicator.style.setProperty("--pull-offset", `${Math.min(distance, 64)}px`);
+    indicator.classList.toggle("armed", distance >= threshold);
+    label.textContent = distance >= threshold ? "Release to refresh" : "Pull to refresh";
+    show(distance > 12);
+  }, { passive: false });
+
+  const finish = async () => {
+    if (!pulling) return;
+    const shouldRefresh = distance >= threshold;
+    pulling = false;
+    if (!shouldRefresh || refreshing) { reset(); return; }
+    refreshing = true;
+    home.classList.remove("pulling");
+    indicator.classList.remove("armed");
+    indicator.classList.add("refreshing");
+    indicator.style.setProperty("--pull-offset", "56px");
+    label.textContent = "Refreshing…";
+    show(true);
+    const results = await Promise.all([loadWallet(), loadProfile()]);
+    label.textContent = results.every(Boolean) ? "Updated" : "Could not refresh";
+    setTimeout(() => { refreshing = false; reset(); }, 650);
+  };
+  home.addEventListener("touchend", finish, { passive: true });
+  home.addEventListener("touchcancel", () => { if (!refreshing) reset(); }, { passive: true });
 }
 
 /* =========================================================
@@ -1555,6 +1632,136 @@ function setButtonLoading(button, loading, text) {
 /* =========================================================
    QUICK BUTTONS
    ========================================================= */
+
+function setupAppLock() {
+  const screen = $("appLockScreen");
+  const input = $("appLockPin");
+  const dots = $("appLockDots");
+  const message = $("appLockMessage");
+  const unlockButton = $("appLockUnlock");
+  if (!screen || !input || !unlockButton) return;
+
+  let locked = document.documentElement.dataset.appLockRequired === "true" && Boolean(getToken());
+  let lockTimer;
+  let busy = false;
+  const updateDots = () => dots?.querySelectorAll("i").forEach((dot, index) => dot.classList.toggle("filled", index < input.value.length));
+  const setLocked = (value) => {
+    locked = value;
+    screen.classList.toggle("active", value);
+    screen.setAttribute("aria-hidden", String(!value));
+    document.documentElement.classList.toggle("app-is-locked", value);
+    document.documentElement.dataset.appLockRequired = String(value);
+    if (value) {
+      try { localStorage.setItem(APP_LOCK_KEY, String(Date.now())); localStorage.setItem(APP_LOCK_STATE_KEY, "1"); } catch (_) {}
+      input.value = "";
+      updateDots();
+      message.textContent = "";
+      message.className = "app-lock-message";
+    } else {
+      try { localStorage.removeItem(APP_LOCK_KEY); localStorage.removeItem(APP_LOCK_STATE_KEY); } catch (_) {}
+      scheduleLock();
+    }
+  };
+  const scheduleLock = () => {
+    clearTimeout(lockTimer);
+    if (!getToken() || locked) return;
+    lockTimer = setTimeout(() => setLocked(true), APP_LOCK_DELAY);
+  };
+  const recordActivity = () => {
+    if (locked) return;
+    scheduleLock();
+  };
+
+  if (locked) setLocked(true);
+  else scheduleLock();
+
+  ["pointerdown", "keydown", "touchstart"].forEach((name) => {
+    document.addEventListener(name, recordActivity, { passive: true });
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      try {
+        localStorage.setItem(APP_LOCK_KEY, String(Date.now()));
+        if (getToken()) localStorage.setItem(APP_LOCK_STATE_KEY, "1");
+      } catch (_) {}
+      return;
+    }
+    let shouldLock = false;
+    try {
+      const awayAt = Number(localStorage.getItem(APP_LOCK_KEY)) || 0;
+      shouldLock = localStorage.getItem(APP_LOCK_STATE_KEY) === "1" || (awayAt && Date.now() - awayAt >= APP_LOCK_DELAY);
+    } catch (_) {}
+    if (shouldLock && getToken()) setLocked(true);
+    else {
+      try { localStorage.removeItem(APP_LOCK_KEY); } catch (_) {}
+      scheduleLock();
+    }
+  });
+  window.addEventListener("pagehide", () => {
+    try {
+      localStorage.setItem(APP_LOCK_KEY, String(Date.now()));
+      if (getToken()) localStorage.setItem(APP_LOCK_STATE_KEY, "1");
+    } catch (_) {}
+  });
+
+  screen.querySelectorAll("[data-lock-digit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (locked && input.value.length < 4) { input.value += button.dataset.lockDigit; updateDots(); }
+    });
+  });
+  screen.querySelector('[data-lock-action="clear"]')?.addEventListener("click", () => { input.value = ""; updateDots(); });
+  screen.querySelector('[data-lock-action="delete"]')?.addEventListener("click", () => { input.value = input.value.slice(0, -1); updateDots(); });
+
+  $("appLockLogout")?.addEventListener("click", () => {
+    try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem("mamu_user"); localStorage.removeItem(APP_LOCK_KEY); localStorage.removeItem(APP_LOCK_STATE_KEY); } catch (_) {}
+    window.location.href = "./login.html";
+  });
+
+  unlockButton.addEventListener("click", async () => {
+    if (!locked || busy) return;
+    if (!/^\d{4}$/.test(input.value)) {
+      message.textContent = "Enter all 4 digits.";
+      return;
+    }
+    busy = true;
+    unlockButton.disabled = true;
+    message.textContent = "Checking PIN…";
+    try {
+      const response = await fetch(`${API_BASE}/security/transaction-pin/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken() || ""}` },
+        body: JSON.stringify({ pin: input.value }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (response.ok && result.success) {
+        setLocked(false);
+        return;
+      }
+      if (response.status === 400 && /transaction pin has not been created/i.test(result.message || "")) {
+        setLocked(false);
+        openTransactionPinModal();
+        return;
+      }
+      if (response.status === 401 && !/incorrect transaction pin/i.test(result.message || "")) {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem("mamu_user");
+        localStorage.removeItem(APP_LOCK_KEY);
+        localStorage.removeItem(APP_LOCK_STATE_KEY);
+        window.location.href = "./login.html";
+        return;
+      }
+      input.value = "";
+      updateDots();
+      message.textContent = response.status === 401 ? "Incorrect PIN. Try again." : (result.message || "Could not verify PIN. Try again.");
+    } catch (_) {
+      message.textContent = "Could not connect. Check your connection and try again.";
+    } finally {
+      busy = false;
+      unlockButton.disabled = false;
+    }
+  });
+}
+
 function setupSignOut() {
   const signOut = () => {
     localStorage.removeItem(TOKEN_KEY);
@@ -1572,10 +1779,10 @@ function setupSettings() {
   const darkModeToggle = $("settingsDarkModeToggle");
   const applyTheme = (dark) => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    try { localStorage.setItem("mamu_theme", dark ? "dark" : "light"); } catch (_) {}
+    try { localStorage.setItem(THEME_KEY, dark ? "dark" : "light"); } catch (_) {}
   };
   if (darkModeToggle) {
-    darkModeToggle.checked = localStorage.getItem("mamu_theme") === "dark";
+    try { darkModeToggle.checked = localStorage.getItem(THEME_KEY) === "dark"; } catch (_) { darkModeToggle.checked = false; }
     darkModeToggle.addEventListener("change", () => applyTheme(darkModeToggle.checked));
   }
 
@@ -1826,7 +2033,6 @@ async function initApp() {
 
   setupNavigation();
   setupBalanceToggle();
-  setupWalletRefresh();
   setupSideMenu();
 
   setupDataPurchase();
@@ -1906,6 +2112,8 @@ loadProfile().catch((error) => {
   setupWhatsApp();
   setupWhatsAppFloating();
   setupSignOut();
+  setupPullToRefresh();
+  setupAppLock();
     showPage("home");
   setupTransactionPin();
   setupTransactionPinReset();  

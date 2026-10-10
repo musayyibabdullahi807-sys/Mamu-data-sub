@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#2563eb">
+  <script>try{if(localStorage.getItem("mamu_token"))document.documentElement.dataset.appLockRequired="true";}catch(_){}</script>
+  <style>html[data-app-lock-required="true"] body>:not(#standaloneAppLock){visibility:hidden!important}</style>
   <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";}catch(_){}</script>
   <title>Marketplace Admin | MAMU</title>
   <link rel="stylesheet" href="/css/style.css">
@@ -30,5 +32,6 @@
     <div class="toolbar" style="justify-content:space-between"><button id="users-prev">Previous</button><span id="users-page" style="color:#64748b"></span><button id="users-next">Next</button></div>
   </main>
   <script src="/js/marketplace-admin.js?v=admin-gate-2"></script>
+  <script src="/js/standalone-app-lock.js?v=2"></script>
 </body>
 </html>

@@ -8,8 +8,8 @@
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>MAMU DATA SUB</title>
-  <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";}catch(_){}</script>
-  <link rel="stylesheet" href="./css/style.css?v=admin-owner-only-2">
+  <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";if(localStorage.getItem("mamu_token"))document.documentElement.dataset.appLockRequired="true";}catch(_){}</script>
+  <link rel="stylesheet" href="./css/style.css?v=pull-refresh-1">
   <link rel="stylesheet" href="./css/marketplace.css?v=admin-owner-only-2">
 </head>
 
@@ -19,6 +19,11 @@
 
   <!-- HOME -->
   <section class="page active" id="homePage">
+
+    <div id="pullRefreshIndicator" class="pull-refresh-indicator" aria-live="polite" aria-hidden="true">
+      <span class="pull-refresh-spinner" aria-hidden="true"></span>
+      <span id="pullRefreshLabel">Pull to refresh</span>
+    </div>
 
     <header class="header">
       <div class="header-left">
@@ -52,9 +57,8 @@
         <div class="wallet-top">
           <span>Available Balance</span>
 
-          <button id="refreshWalletBalance" class="balance-refresh" type="button" aria-label="Refresh wallet balance" title="Refresh balance">↻</button>
-          <button id="toggleBalance" class="balance-toggle" type="button">
-            Hide
+          <button id="toggleBalance" class="balance-toggle" type="button" aria-label="Hide balance" title="Hide balance">
+            <svg class="balance-eye-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></svg>
           </button>
         </div>
 
@@ -1459,7 +1463,27 @@
 </nav>
 
 
-<script src="./js/app.js"></script>
+
+<div id="appLockScreen" class="app-lock-screen" aria-hidden="true">
+  <section class="app-lock-card" role="dialog" aria-modal="true" aria-labelledby="appLockTitle">
+    <div class="app-lock-mark" aria-hidden="true">M</div>
+    <h1 id="appLockTitle">App locked</h1>
+    <p>Enter your 4-digit transaction PIN to continue.</p>
+    <input id="appLockPin" class="app-lock-pin" type="password" inputmode="none" maxlength="4" autocomplete="off" aria-label="Four-digit transaction PIN" readonly>
+    <div id="appLockDots" class="app-lock-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+    <p id="appLockMessage" class="app-lock-message" aria-live="polite"></p>
+    <div class="app-lock-keypad" aria-label="PIN keypad">
+      <button type="button" data-lock-digit="1">1</button><button type="button" data-lock-digit="2">2</button><button type="button" data-lock-digit="3">3</button>
+      <button type="button" data-lock-digit="4">4</button><button type="button" data-lock-digit="5">5</button><button type="button" data-lock-digit="6">6</button>
+      <button type="button" data-lock-digit="7">7</button><button type="button" data-lock-digit="8">8</button><button type="button" data-lock-digit="9">9</button>
+      <button type="button" class="app-lock-action" data-lock-action="clear">Clear</button><button type="button" data-lock-digit="0">0</button><button type="button" class="app-lock-action" data-lock-action="delete" aria-label="Delete last digit">⌫</button>
+    </div>
+    <button id="appLockUnlock" class="primary-btn full-btn" type="button">Unlock</button>
+    <button id="appLockLogout" class="secondary-btn full-btn" type="button">Log out</button>
+  </section>
+</div>
+
+<script src="./js/app.js?v=pull-refresh-1"></script>
 <script src="./js/marketplace-product-detail.js?v=hide-nav-1"></script>
 <script src="./js/marketplace-blob-client.bundle.js?v=vercel-blob-1"></script>
 <script src="./js/marketplace.js?v=vercel-blob-1"></script>
