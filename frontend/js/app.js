@@ -331,13 +331,15 @@ function setupPullToRefresh() {
     show(false);
   };
 
-  home.addEventListener("touchstart", (event) => {
-    if (!home.classList.contains("active") || refreshing || window.scrollY > 0 || !event.touches.length) return;
+  const scrollPosition = () => window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  document.addEventListener("touchstart", (event) => {
+    if (!home.classList.contains("active") || refreshing || scrollPosition() > 0 || !event.touches.length) return;
+    if (event.target.closest("input, textarea, select, button, a, video")) return;
     startY = event.touches[0].clientY;
     pulling = true;
-  }, { passive: true });
+  }, { passive: true, capture: true });
 
-  home.addEventListener("touchmove", (event) => {
+  document.addEventListener("touchmove", (event) => {
     if (!pulling || refreshing || !event.touches.length) return;
     distance = Math.max(0, Math.min(event.touches[0].clientY - startY, 110));
     if (distance <= 0) return;
@@ -347,7 +349,7 @@ function setupPullToRefresh() {
     indicator.classList.toggle("armed", distance >= threshold);
     label.textContent = distance >= threshold ? "Release to refresh" : "Pull to refresh";
     show(distance > 12);
-  }, { passive: false });
+  }, { passive: false, capture: true });
 
   const finish = async () => {
     if (!pulling) return;
@@ -365,8 +367,8 @@ function setupPullToRefresh() {
     label.textContent = results.every(Boolean) ? "Updated" : "Could not refresh";
     setTimeout(() => { refreshing = false; reset(); }, 650);
   };
-  home.addEventListener("touchend", finish, { passive: true });
-  home.addEventListener("touchcancel", () => { if (!refreshing) reset(); }, { passive: true });
+  document.addEventListener("touchend", finish, { passive: true, capture: true });
+  document.addEventListener("touchcancel", () => { if (!refreshing) reset(); }, { passive: true, capture: true });
 }
 
 /* =========================================================
@@ -1241,12 +1243,14 @@ async function loadProfile() {
 
 updateProfileUI(currentUser);
 updateDashboardHeader();
+    return true;
   } catch (error) {
     console.error("Load profile error:", error);
     showToast(
       error.message || "Unable to load profile.",
       "error"
     );
+    return false;
   }
 }
 
