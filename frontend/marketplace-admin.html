@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#2563eb">
-  <script>try{if(localStorage.getItem("mamu_token"))document.documentElement.dataset.appLockRequired="true";}catch(_){}</script>
+  <script>try{var awayAt=Number(localStorage.getItem("mamu_app_locked_at"))||0;var mustLock=localStorage.getItem("mamu_app_is_locked")==="1"||(awayAt>0&&Date.now()-awayAt>=10000);if(localStorage.getItem("mamu_token")&&mustLock)document.documentElement.dataset.appLockRequired="true";else if(awayAt)localStorage.removeItem("mamu_app_locked_at");}catch(_){}</script>
   <style>html[data-app-lock-required="true"] body>:not(#standaloneAppLock){visibility:hidden!important}</style>
   <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";}catch(_){}</script>
   <title>Marketplace Admin | MAMU</title>
@@ -29,9 +29,20 @@
     <div class="toolbar"><input id="user-search" type="search" placeholder="Search name, phone, or email" aria-label="Search users" style="flex:1;font:inherit;border-radius:10px;padding:11px 13px;border:1px solid #dbe2ef"><button id="users-reload">Refresh users</button></div>
     <div class="stat" style="margin-bottom:12px"><span>Total registered users</span><strong id="users-total">—</strong></div>
     <section id="registered-users" aria-live="polite"><div class="status">Loading registered users...</div></section>
+    <header style="margin-top:30px"><h2>Wallet bank transfer</h2><p style="color:#64748b;font-size:13px">Set the account users should transfer money to.</p></header>
+    <section class="application">
+      <div class="form-group"><label for="funding-bank-name">Bank name</label><input id="funding-bank-name" maxlength="80" placeholder="Bank name"></div>
+      <div class="form-group"><label for="funding-account-name">Account name</label><input id="funding-account-name" maxlength="100" placeholder="Account holder name"></div>
+      <div class="form-group"><label for="funding-account-number">10-digit account number</label><input id="funding-account-number" inputmode="numeric" maxlength="10" placeholder="0123456789"></div>
+      <div class="actions"><button id="save-funding-account">Save bank details</button></div>
+      <p id="funding-account-status" class="status" aria-live="polite"></p>
+    </section>
+    <header style="margin-top:30px"><h2>Pending wallet top-ups</h2><p style="color:#64748b;font-size:13px">Check your bank account first. Approving a request adds its amount to the user's wallet.</p></header>
+    <div class="toolbar"><button id="funding-requests-reload">Refresh top-up requests</button></div>
+    <section id="manual-funding-requests" aria-live="polite"><div class="status">Loading top-up requests...</div></section>
     <div class="toolbar" style="justify-content:space-between"><button id="users-prev">Previous</button><span id="users-page" style="color:#64748b"></span><button id="users-next">Next</button></div>
   </main>
-  <script src="/js/marketplace-admin.js?v=admin-gate-2"></script>
-  <script src="/js/standalone-app-lock.js?v=2"></script>
+  <script src="/js/marketplace-admin.js?v=manual-funding-1"></script>
+  <script src="/js/standalone-app-lock.js?v=5"></script>
 </body>
 </html>

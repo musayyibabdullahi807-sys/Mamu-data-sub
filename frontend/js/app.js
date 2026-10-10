@@ -8,7 +8,7 @@ const TOKEN_KEY = "mamu_token";
 const THEME_KEY = "mamu_theme";
 const APP_LOCK_KEY = "mamu_app_locked_at";
 const APP_LOCK_STATE_KEY = "mamu_app_is_locked";
-const APP_LOCK_DELAY = 6 * 1000;
+const APP_LOCK_DELAY = 10 * 1000;
 
 function applySavedTheme() {
   let dark = false;
@@ -845,6 +845,72 @@ function closePurchaseReceipt() {
   }
 }
 
+function createPurchaseReceiptImage(receipt) {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 900;
+    canvas.height = 1040;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return reject(new Error("Canvas is not available"));
+    const rounded = (x, y, width, height, radius, color) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+      ctx.fill();
+    };
+    ctx.fillStyle = "#eef3fa";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    rounded(52, 44, 796, 952, 30, "#ffffff");
+    rounded(52, 44, 796, 220, 30, "#155eef");
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 36px system-ui, sans-serif";
+    ctx.fillText("MAMU DATA SUB", 92, 118);
+    ctx.font = "500 24px system-ui, sans-serif";
+    ctx.fillStyle = "#dbeafe";
+    ctx.fillText("Transaction Receipt", 92, 160);
+    const statusText = receipt.status === "successful" ? "PURCHASE SUCCESSFUL" : receipt.status === "failed" ? "PURCHASE FAILED" : "TRANSACTION PENDING";
+    const statusColor = receipt.status === "successful" ? "#15803d" : receipt.status === "failed" ? "#b91c1c" : "#a16207";
+    const statusBg = receipt.status === "successful" ? "#dcfce7" : receipt.status === "failed" ? "#fee2e2" : "#fef3c7";
+    rounded(92, 190, 340, 44, 22, statusBg);
+    ctx.fillStyle = statusColor;
+    ctx.font = "800 17px system-ui, sans-serif";
+    ctx.fillText(statusText, 112, 219);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "600 18px system-ui, sans-serif";
+    ctx.fillText("AMOUNT", 96, 326);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "800 46px system-ui, sans-serif";
+    ctx.fillText(money(receipt.amount), 96, 385);
+    const rows = [
+      ["Phone", receipt.phone], ["Network", receipt.network], ["Service", receipt.plan],
+      ["Reference", receipt.reference], ["Provider reference", receipt.providerReference || "—"],
+      ["Date & time", receipt.date], ["Wallet balance", money(receipt.walletBalance)],
+    ];
+    let y = 452;
+    rows.forEach(([label, value]) => {
+      ctx.strokeStyle = "#e2e8f0";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(96, y); ctx.lineTo(804, y); ctx.stroke();
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#64748b";
+      ctx.font = "500 19px system-ui, sans-serif";
+      ctx.fillText(label, 98, y + 38);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "700 19px system-ui, sans-serif";
+      let text = String(value || "—");
+      while (ctx.measureText(text).width > 430 && text.length > 8) text = `${text.slice(0, -5)}…`;
+      ctx.fillText(text, 800, y + 38);
+      y += 68;
+    });
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#64748b";
+    ctx.font = "500 17px system-ui, sans-serif";
+    ctx.fillText("Thank you for using MAMU DATA SUB", 450, 958);
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not render receipt image")), "image/png");
+  });
+}
+
 function setupPurchaseReceipt() {
   $("doneReceiptBtn")?.addEventListener(
     "click",
@@ -853,47 +919,22 @@ function setupPurchaseReceipt() {
 
   $("shareReceiptBtn")?.addEventListener("click", async () => {
     if (!currentReceipt) return;
-
-    const receiptText = `
-MAMU DATA SUB
-Transaction Receipt
-
-Status: ${
-      currentReceipt.status === "successful"
-        ? "Purchase Successful"
-        : currentReceipt.status === "failed"
-        ? "Purchase Failed"
-        : "Transaction Pending"
-    }
-
-Phone: ${currentReceipt.phone}
-Network: ${currentReceipt.network}
-Plan: ${currentReceipt.plan}
-Amount: ${money(currentReceipt.amount)}
-Reference: ${currentReceipt.reference}
-Provider Reference: ${currentReceipt.providerReference || "—"}
-Date & Time: ${currentReceipt.date}
-Wallet Balance: ${money(currentReceipt.walletBalance)}
-
-Thank you for using MAMU DATA SUB.
-`.trim();
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "MAMU DATA SUB Receipt",
-          text: receiptText,
-        });
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          showToast("Unable to share receipt.", "error");
-        }
+    try {
+      const blob = await createPurchaseReceiptImage(currentReceipt);
+      const file = new File([blob], `mamu-receipt-${currentReceipt.reference || Date.now()}.png`, { type: "image/png" });
+      if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+        await navigator.share({ title: "MAMU DATA SUB Receipt", files: [file] });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = file.name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast("Receipt image downloaded. You can share it from your gallery.", "success");
       }
-    } else {
-      showToast(
-        "Sharing is not supported on this device.",
-        "error"
-      );
+    } catch (error) {
+      if (error.name !== "AbortError") showToast("Could not create or share receipt image.", "error");
     }
   });
 }
@@ -1126,16 +1167,17 @@ function setupAirtimePurchase() {
         try {
           setButtonLoading(button, true);
           const data = await apiRequest("/airtime/purchase", { method:"POST", body:JSON.stringify({ serviceID:selectedNetwork, phone, amount, pin }) });
-          showToast(data.message || "Airtime purchase submitted successfully.", "success");
+          showPurchaseReceipt({ status:data.status || "successful", phone, network:({ mtn:"MTN", airtel:"Airtel", glo:"Glo", etisalat:"9mobile", "9mobile":"9mobile" })[selectedNetwork] || selectedNetwork, plan:"Airtime Top-up", amount, reference:data.reference || "", providerReference:data.providerReference || "", walletBalance:Number(data.walletBalance || 0) });
+          showToast(data.message || "Airtime purchase submitted successfully.", data.status === "pending" ? "error" : "success");
           $("airtimePhone").value = ""; $("airtimeAmount").value = ""; $("airtimePin").value = "";
           selectedNetwork = "";
           document.querySelectorAll("[data-airtime-network]").forEach((item) => item.classList.remove("selected"));
           await refreshHome(); await loadTransactions();
           return true;
         } catch (error) {
-          $("servicePurchasePinMessage").textContent = error.message || "Airtime purchase failed.";
-          $("servicePurchasePinMessage").className = "pin-prompt-message error";
-          return false;
+          showPurchaseReceipt({ status:error.status || "failed", phone, network:({ mtn:"MTN", airtel:"Airtel", glo:"Glo", etisalat:"9mobile", "9mobile":"9mobile" })[selectedNetwork] || selectedNetwork, plan:"Airtime Top-up", amount, reference:error.reference || "", providerReference:error.providerReference || "", walletBalance:Number(error.walletBalance || 0) });
+          showToast(error.message || "Airtime purchase failed.", "error");
+          return true;
         }
         finally { setButtonLoading(button, false); }
       },
@@ -1542,72 +1584,59 @@ function setupReferralCopy() {
    ========================================================= */
 function setupFundWallet() {
   const button = $("fundBtn");
-
+  const accountBox = $("manualBankAccount");
   if (!button) return;
+
+  const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[char]));
+  const loadBankDetails = async () => {
+    if (!accountBox) return;
+    try {
+      const data = await apiRequest("/wallet/manual-transfer/details");
+      if (!data.configured || !data.account) {
+        accountBox.innerHTML = "<p>Bank transfer details are not available yet. Please check again later.</p>";
+        button.disabled = true;
+        return;
+      }
+      accountBox.innerHTML = `<div class="manual-bank-row"><span>Bank</span><strong>${escapeHtml(data.account.bankName)}</strong></div><div class="manual-bank-row"><span>Account name</span><strong>${escapeHtml(data.account.accountName)}</strong></div><div class="manual-bank-row"><span>Account number</span><strong id="manualBankNumber">${escapeHtml(data.account.accountNumber)}</strong></div><button id="copyManualBankNumber" class="secondary-btn full-btn" type="button">Copy account number</button>`;
+      $("copyManualBankNumber")?.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(data.account.accountNumber); showToast("Account number copied.", "success"); }
+        catch (_) { showToast("Could not copy account number.", "error"); }
+      });
+      button.disabled = false;
+    } catch (error) {
+      accountBox.innerHTML = `<p>${escapeHtml(error.message || "Could not load bank details.")}</p>`;
+      button.disabled = true;
+    }
+  };
+  loadBankDetails();
 
   button.addEventListener("click", async () => {
     const amount = Number($("fundAmount")?.value);
-
-    if (!Number.isFinite(amount) || amount < 100) {
-      showToast("Minimum funding amount is ₦100.", "error");
-      return;
+    const senderName = $("fundSenderName")?.value.trim();
+    const senderBank = $("fundSenderBank")?.value.trim();
+    const transferReference = $("fundTransferReference")?.value.trim();
+    if (!Number.isSafeInteger(amount) || amount < 100) {
+      showToast("Enter a whole amount of at least ₦100.", "error"); return;
     }
-
-    setButtonLoading(button, true, "Preparing payment...");
-
+    if (!senderName || !senderBank) {
+      showToast("Enter the sender name and sending bank.", "error"); return;
+    }
+    setButtonLoading(button, true, "Submitting request...");
     try {
-      const result = await apiRequest(
-        "/payment/initialize",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            amount,
-          }),
-        }
-      );
-
-      if (!result.success) {
-        throw new Error(
-          result.message ||
-          "Unable to initialize payment."
-        );
-      }
-
-      if (!result.authorizationUrl) {
-        throw new Error(
-          "Paystack checkout URL was not returned."
-        );
-      }
-
-      showToast(
-        "Opening Paystack Checkout...",
-        "success"
-      );
-
-      setTimeout(() => {
-        window.location.href =
-          result.authorizationUrl;
-      }, 500);
-
+      const result = await apiRequest("/wallet/manual-transfer/requests", {
+        method: "POST",
+        body: JSON.stringify({ amount, senderName, senderBank, transferReference }),
+      });
+      $("manualFundingStatus").textContent = `${result.message} Reference: ${result.reference}`;
+      $("fundAmount").value = "";
+      $("fundSenderName").value = "";
+      $("fundSenderBank").value = "";
+      $("fundTransferReference").value = "";
+      showToast("Transfer details submitted for confirmation.", "success");
+      setButtonLoading(button, false, "Submit transfer details");
     } catch (error) {
-      console.error(
-        "Wallet funding error:",
-        error
-      );
-
-      if (error.message !== "Unauthorized") {
-        showToast(
-          error.message ||
-          "Unable to start wallet funding.",
-          "error"
-        );
-      }
-
-      setButtonLoading(
-        button,
-        false,
-        "Fund Wallet"
-      );
+      showToast(error.message || "Could not submit transfer details.", "error");
+      setButtonLoading(button, false, "Submit transfer details");
     }
   });
 }
@@ -1643,7 +1672,56 @@ function setupAppLock() {
   const dots = $("appLockDots");
   const message = $("appLockMessage");
   const unlockButton = $("appLockUnlock");
+  const biometricButton = $("appLockBiometric");
   if (!screen || !input || !unlockButton) return;
+
+  const fromBase64Url = (value) => {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+    return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+  };
+  const toBase64Url = (buffer) => {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  };
+  const serializeCredential = (credential) => {
+    const response = credential.response;
+    const serialized = { id: credential.id, rawId: toBase64Url(credential.rawId), type: credential.type, response: {} };
+    if (response.clientDataJSON) serialized.response.clientDataJSON = toBase64Url(response.clientDataJSON);
+    if (response.attestationObject) serialized.response.attestationObject = toBase64Url(response.attestationObject);
+    if (response.authenticatorData) serialized.response.authenticatorData = toBase64Url(response.authenticatorData);
+    if (response.signature) serialized.response.signature = toBase64Url(response.signature);
+    if (response.userHandle) serialized.response.userHandle = toBase64Url(response.userHandle);
+    if (response.getTransports) serialized.response.transports = response.getTransports();
+    return serialized;
+  };
+  const passkeyRequestOptions = (options) => {
+    options.challenge = fromBase64Url(options.challenge);
+    if (options.user?.id) options.user.id = fromBase64Url(options.user.id);
+    ["allowCredentials", "excludeCredentials"].forEach((key) => {
+      if (options[key]) options[key] = options[key].map((credential) => ({ ...credential, id: fromBase64Url(credential.id) }));
+    });
+    return options;
+  };
+  const securityFetch = async (path, body) => {
+    const response = await fetch(`${API_BASE}/security${path}`, {
+      method: body ? "POST" : "GET",
+      headers: { Authorization: `Bearer ${getToken() || ""}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) throw new Error(data.message || "Biometric unlock is unavailable.");
+    return data;
+  };
+  let biometricEnabled = false;
+  if (biometricButton && window.PublicKeyCredential && navigator.credentials) {
+    securityFetch("/passkey/status").then((data) => {
+      biometricEnabled = data.enabled;
+      biometricButton.hidden = false;
+      biometricButton.textContent = biometricEnabled ? "Unlock with fingerprint or Face ID" : "Enable fingerprint or Face ID";
+    }).catch(() => { biometricButton.hidden = true; });
+  }
 
   let locked = document.documentElement.dataset.appLockRequired === "true" && Boolean(getToken());
   let lockTimer;
@@ -1668,45 +1746,38 @@ function setupAppLock() {
   };
   const scheduleLock = () => {
     clearTimeout(lockTimer);
-    if (!getToken() || locked) return;
-    lockTimer = setTimeout(() => setLocked(true), APP_LOCK_DELAY);
+    if (!getToken() || locked || !document.hidden) return;
+    let awayAt = Date.now();
+    try {
+      awayAt = Number(localStorage.getItem(APP_LOCK_KEY)) || Date.now();
+      localStorage.setItem(APP_LOCK_KEY, String(awayAt));
+    } catch (_) {}
+    lockTimer = setTimeout(() => {
+      if (document.hidden && getToken()) setLocked(true);
+    }, Math.max(0, APP_LOCK_DELAY - (Date.now() - awayAt)));
   };
-  const recordActivity = () => {
-    if (locked) return;
+  const markAway = () => {
+    if (!getToken() || locked) return;
+    try { localStorage.setItem(APP_LOCK_KEY, String(Date.now())); } catch (_) {}
     scheduleLock();
   };
 
   if (locked) setLocked(true);
-  else scheduleLock();
-
-  ["pointerdown", "keydown", "touchstart"].forEach((name) => {
-    document.addEventListener(name, recordActivity, { passive: true });
-  });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      try {
-        localStorage.setItem(APP_LOCK_KEY, String(Date.now()));
-        if (getToken()) localStorage.setItem(APP_LOCK_STATE_KEY, "1");
-      } catch (_) {}
+      markAway();
       return;
     }
+    clearTimeout(lockTimer);
     let shouldLock = false;
     try {
       const awayAt = Number(localStorage.getItem(APP_LOCK_KEY)) || 0;
-      shouldLock = localStorage.getItem(APP_LOCK_STATE_KEY) === "1" || (awayAt && Date.now() - awayAt >= APP_LOCK_DELAY);
+      shouldLock = localStorage.getItem(APP_LOCK_STATE_KEY) === "1" || (awayAt > 0 && Date.now() - awayAt >= APP_LOCK_DELAY);
+      if (!shouldLock) localStorage.removeItem(APP_LOCK_KEY);
     } catch (_) {}
     if (shouldLock && getToken()) setLocked(true);
-    else {
-      try { localStorage.removeItem(APP_LOCK_KEY); } catch (_) {}
-      scheduleLock();
-    }
   });
-  window.addEventListener("pagehide", () => {
-    try {
-      localStorage.setItem(APP_LOCK_KEY, String(Date.now()));
-      if (getToken()) localStorage.setItem(APP_LOCK_STATE_KEY, "1");
-    } catch (_) {}
-  });
+  window.addEventListener("pagehide", markAway);
 
   screen.querySelectorAll("[data-lock-digit]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -1719,6 +1790,40 @@ function setupAppLock() {
   $("appLockLogout")?.addEventListener("click", () => {
     try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem("mamu_user"); localStorage.removeItem(APP_LOCK_KEY); localStorage.removeItem(APP_LOCK_STATE_KEY); } catch (_) {}
     window.location.href = "./login.html";
+  });
+
+  biometricButton?.addEventListener("click", async () => {
+    if (!locked || busy || !window.PublicKeyCredential || !navigator.credentials) return;
+    busy = true;
+    biometricButton.disabled = true;
+    try {
+      if (biometricEnabled) {
+        message.textContent = "Confirm with your device biometrics…";
+        const { options } = await securityFetch("/passkey/authenticate/options", {});
+        const credential = await navigator.credentials.get({ publicKey: passkeyRequestOptions(options) });
+        await securityFetch("/passkey/authenticate/verify", { credential: serializeCredential(credential) });
+        setLocked(false);
+      } else {
+        if (!/^\d{4}$/.test(input.value)) {
+          message.textContent = "Enter your 4-digit transaction PIN above to enable biometric unlock.";
+          return;
+        }
+        message.textContent = "Setting up device biometrics…";
+        const { options } = await securityFetch("/passkey/register/options", { pin: input.value });
+        const credential = await navigator.credentials.create({ publicKey: passkeyRequestOptions(options) });
+        await securityFetch("/passkey/register/verify", { credential: serializeCredential(credential) });
+        biometricEnabled = true;
+        input.value = "";
+        updateDots();
+        message.textContent = "Biometric unlock is ready on this device.";
+        biometricButton.textContent = "Unlock with fingerprint or Face ID";
+      }
+    } catch (error) {
+      if (error.name !== "NotAllowedError" && error.name !== "AbortError") message.textContent = error.message || "Biometric unlock failed. Use your PIN.";
+    } finally {
+      busy = false;
+      biometricButton.disabled = false;
+    }
   });
 
   unlockButton.addEventListener("click", async () => {

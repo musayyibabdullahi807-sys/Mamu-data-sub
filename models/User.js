@@ -42,6 +42,16 @@ transactionPinHash: {
   default: null,
 },
 
+    passkeys: [{
+      credentialID: { type: String, required: true },
+      publicKey: { type: String, required: true },
+      counter: { type: Number, default: 0 },
+      transports: { type: [String], default: [] },
+      createdAt: { type: Date, default: Date.now },
+    }],
+    passkeyChallenge: { type: String, default: null },
+    passkeyChallengeType: { type: String, default: null },
+
     address: {
       type: String,
       trim: true,

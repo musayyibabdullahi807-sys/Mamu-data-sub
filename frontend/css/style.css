@@ -3313,3 +3313,13 @@ html[data-theme="dark"] .pull-refresh-spinner { border-color:#475569; border-top
 .network-card .network-name { font-size:10px; line-height:1.1; }
 
 html, body { overscroll-behavior-y: contain; }
+.app-lock-biometric { margin: 0 0 12px; }
+
+.manual-bank-account{padding:14px;border:1px solid #dce5f2;border-radius:14px;background:#f7faff;margin:14px 0}
+.manual-bank-account p{margin:0;color:#64748b;font-size:13px}
+.manual-bank-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #e5eaf2;font-size:14px}
+.manual-bank-row:last-of-type{border-bottom:0}
+.manual-bank-row span{color:#64748b}.manual-bank-row strong{text-align:right;overflow-wrap:anywhere}
+.manual-bank-account button{margin-top:10px}.manual-funding-note{font-size:13px;line-height:1.5;color:#64748b}
+html[data-theme="dark"] .manual-bank-account{background:#0f1929;border-color:#29364a}
+html[data-theme="dark"] .manual-bank-row{border-color:#29364a}

@@ -8,7 +8,7 @@
 <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>MAMU DATA SUB</title>
-  <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";if(localStorage.getItem("mamu_token"))document.documentElement.dataset.appLockRequired="true";}catch(_){}</script>
+  <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";var awayAt=Number(localStorage.getItem("mamu_app_locked_at"))||0;var mustLock=localStorage.getItem("mamu_app_is_locked")==="1"||(awayAt>0&&Date.now()-awayAt>=10000);if(localStorage.getItem("mamu_token")&&mustLock)document.documentElement.dataset.appLockRequired="true";else if(awayAt) localStorage.removeItem("mamu_app_locked_at");}catch(_){}</script>
   <link rel="stylesheet" href="./css/style.css?v=pull-refresh-2">
   <link rel="stylesheet" href="./css/marketplace.css?v=admin-owner-only-2">
 </head>
@@ -698,38 +698,18 @@
     <main class="page-content">
 
       <div class="form-card">
-
-        <div class="fund-option active">
-          <div>
-            <strong>Pay with Paystack</strong>
-            <span>Fund your wallet using Paystack</span>
-          </div>
+        <div class="fund-option active"><div><strong>Bank transfer</strong><span>Transfer to the MAMU account below</span></div></div>
+        <div id="manualBankAccount" class="manual-bank-account" aria-live="polite">
+          <p>Loading bank account details...</p>
         </div>
-
-        <div class="form-group">
-          <label for="fundAmount">Amount</label>
-
-          <input
-            id="fundAmount"
-            type="number"
-            inputmode="decimal"
-            min="100"
-            placeholder="Enter amount"
-          >
-        </div>
-
-        <button id="fundBtn" class="primary-btn full-btn" type="button">
-          Continue with Paystack
-        </button>
-
-
-        <div class="coming-soon-option">
-          <strong>Pay with Virtual Account</strong>
-          <span>Coming Soon</span>
-        </div>
-
+        <p class="manual-funding-note">After transferring, enter the details below. Your wallet will be credited after the administrator confirms the money arrived in the bank account.</p>
+        <div class="form-group"><label for="fundAmount">Amount sent (₦)</label><input id="fundAmount" type="number" inputmode="numeric" min="100" step="1" placeholder="Enter amount"></div>
+        <div class="form-group"><label for="fundSenderName">Name on the sending account</label><input id="fundSenderName" type="text" maxlength="100" autocomplete="name" placeholder="Sender's full name"></div>
+        <div class="form-group"><label for="fundSenderBank">Bank you sent from</label><input id="fundSenderBank" type="text" maxlength="80" placeholder="e.g. Access Bank"></div>
+        <div class="form-group"><label for="fundTransferReference">Transfer reference (if shown)</label><input id="fundTransferReference" type="text" maxlength="120" placeholder="Bank transaction reference"></div>
+        <button id="fundBtn" class="primary-btn full-btn" type="button">Submit transfer details</button>
+        <p id="manualFundingStatus" class="quick-service-status" aria-live="polite"></p>
       </div>
-
     </main>
   </section>
 
@@ -1480,6 +1460,7 @@
     <input id="appLockPin" class="app-lock-pin" type="password" inputmode="none" maxlength="4" autocomplete="off" aria-label="Four-digit transaction PIN" readonly>
     <div id="appLockDots" class="app-lock-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
     <p id="appLockMessage" class="app-lock-message" aria-live="polite"></p>
+    <button id="appLockBiometric" class="secondary-btn full-btn app-lock-biometric" type="button" hidden>Use fingerprint or Face ID</button>
     <div class="app-lock-keypad" aria-label="PIN keypad">
       <button type="button" data-lock-digit="1">1</button><button type="button" data-lock-digit="2">2</button><button type="button" data-lock-digit="3">3</button>
       <button type="button" data-lock-digit="4">4</button><button type="button" data-lock-digit="5">5</button><button type="button" data-lock-digit="6">6</button>
@@ -1491,7 +1472,7 @@
   </section>
 </div>
 
-<script src="./js/app.js?v=pull-refresh-2"></script>
+<script src="./js/app.js?v=airtime-image-receipt-1"></script>
 <script src="./js/marketplace-product-detail.js?v=hide-nav-1"></script>
 <script src="./js/marketplace-blob-client.bundle.js?v=vercel-blob-1"></script>
 <script src="./js/marketplace.js?v=vercel-blob-1"></script>

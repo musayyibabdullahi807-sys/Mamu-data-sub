@@ -28,6 +28,30 @@
     } catch (error) { userList.innerHTML = `<div class="status error">${escapeHtml(error.message)}</div>`; }
   }
 
+  async function loadFundingSettings() {
+    const status = document.getElementById("funding-account-status");
+    try {
+      const response = await fetch("/api/wallet/manual-transfer/admin/settings", { headers:{ Authorization:`Bearer ${token()}` } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not load bank account settings.");
+      document.getElementById("funding-bank-name").value = data.account?.bankName || "";
+      document.getElementById("funding-account-name").value = data.account?.accountName || "";
+      document.getElementById("funding-account-number").value = data.account?.accountNumber || "";
+    } catch (error) { status.textContent = error.message; status.classList.add("error"); }
+  }
+
+  async function loadManualFundingRequests() {
+    const section = document.getElementById("manual-funding-requests");
+    section.innerHTML = '<div class="status">Loading top-up requests...</div>';
+    try {
+      const response = await fetch("/api/wallet/manual-transfer/admin/requests", { headers:{ Authorization:`Bearer ${token()}` } });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Could not load top-up requests.");
+      const requests = data.requests || [];
+      section.innerHTML = requests.length ? requests.map((item) => `<article class="application" data-funding-card="${escapeHtml(item.id)}"><div class="application-head"><h2>${escapeHtml(item.user?.name || "Unknown user")} · ₦${Number(item.amount).toLocaleString()}</h2><span class="badge">Pending</span></div><div class="details"><b>Phone:</b> ${escapeHtml(item.user?.phone || "—")}<br><b>Email:</b> ${escapeHtml(item.user?.email || "—")}<br><b>Sender name:</b> ${escapeHtml(item.senderName)}<br><b>Sender bank:</b> ${escapeHtml(item.senderBank)}<br><b>Bank transfer reference:</b> ${escapeHtml(item.transferReference || "Not supplied")}<br><b>Request ID:</b> ${escapeHtml(item.reference)}<br><b>Submitted:</b> ${escapeHtml(date(item.submittedAt))}</div><div class="actions"><button data-funding-action="approve" data-id="${escapeHtml(item.id)}">Confirm transfer and credit wallet</button><button class="reject" data-funding-action="reject" data-id="${escapeHtml(item.id)}">Reject request</button></div></article>`).join("") : '<div class="status">No pending wallet top-ups.</div>';
+    } catch (error) { section.innerHTML = `<div class="status error">${escapeHtml(error.message)}</div>`; }
+  }
+
   async function loadApplications() {
     if (!token()) { list.innerHTML = '<div class="status error">Sign in to your MAMU account first. <a href="/login.html">Login</a></div>'; return; }
     list.innerHTML = '<div class="status">Loading business applications...</div>';
@@ -57,11 +81,35 @@
   }
 
   document.getElementById("reload").addEventListener("click", loadApplications);
+  document.getElementById("funding-requests-reload").addEventListener("click", loadManualFundingRequests);
+  document.getElementById("save-funding-account").addEventListener("click", async (event) => {
+    const button = event.currentTarget;
+    const status = document.getElementById("funding-account-status");
+    button.disabled = true; button.textContent = "Saving..."; status.textContent = "";
+    try {
+      const response = await fetch("/api/wallet/manual-transfer/admin/settings", { method:"PUT", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token()}` }, body:JSON.stringify({ bankName:document.getElementById("funding-bank-name").value, accountName:document.getElementById("funding-account-name").value, accountNumber:document.getElementById("funding-account-number").value }) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.message || "Could not save bank details.");
+      status.textContent = "Bank transfer details saved."; status.classList.remove("error");
+    } catch (error) { status.textContent = error.message; status.classList.add("error"); }
+    finally { button.disabled = false; button.textContent = "Save bank details"; }
+  });
   document.getElementById("users-reload").addEventListener("click", loadUsers);
   document.getElementById("users-prev").addEventListener("click", () => { if (usersPage > 1) { usersPage--; loadUsers(); } });
   document.getElementById("users-next").addEventListener("click", () => { if (usersPage < usersPages) { usersPage++; loadUsers(); } });
   document.getElementById("user-search").addEventListener("input", () => { clearTimeout(usersSearchTimer); usersSearchTimer = setTimeout(() => { usersPage = 1; loadUsers(); }, 300); });
   document.getElementById("status-filter").addEventListener("change", renderApplications);
+  document.getElementById("manual-funding-requests").addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-funding-action]"); if (!button) return;
+    const action = button.dataset.fundingAction;
+    if (action === "approve" && !window.confirm("Have you confirmed this transfer in the bank account? This will credit the user's wallet.")) return;
+    button.disabled = true;
+    try {
+      const response = await fetch(`/api/wallet/manual-transfer/admin/requests/${encodeURIComponent(button.dataset.id)}/${action}`, { method:"POST", headers:{ "Content-Type":"application/json", Authorization:`Bearer ${token()}` }, body:JSON.stringify({}) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.message || "Could not process top-up request.");
+      await loadManualFundingRequests();
+      if (action === "approve") window.alert(`Wallet credited: ₦${Number(data.amount).toLocaleString()}`);
+    } catch (error) { button.disabled = false; window.alert(error.message); }
+  });
   list.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-review]"); if (!button) return;
     const card = button.closest(".application");
@@ -82,8 +130,8 @@
       allApplications = data.sellers || [];
       document.querySelector(".admin-wrap").hidden = false;
       renderApplications();
-      await loadUsers();
-      window.setInterval(() => { if (!document.hidden) loadUsers(); }, 30000);
+      await Promise.all([loadUsers(), loadFundingSettings(), loadManualFundingRequests()]);
+      window.setInterval(() => { if (!document.hidden) { loadUsers(); loadManualFundingRequests(); } }, 30000);
     } catch (_) {
       window.location.replace("/index.html");
     }

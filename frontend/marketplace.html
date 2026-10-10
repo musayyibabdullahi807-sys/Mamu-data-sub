@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#2563eb">
-  <script>try{if(localStorage.getItem("mamu_token"))document.documentElement.dataset.appLockRequired="true";}catch(_){}</script>
+  <script>try{var awayAt=Number(localStorage.getItem("mamu_app_locked_at"))||0;var mustLock=localStorage.getItem("mamu_app_is_locked")==="1"||(awayAt>0&&Date.now()-awayAt>=10000);if(localStorage.getItem("mamu_token")&&mustLock)document.documentElement.dataset.appLockRequired="true";else if(awayAt)localStorage.removeItem("mamu_app_locked_at");}catch(_){}</script>
   <style>html[data-app-lock-required="true"] body>:not(#standaloneAppLock){visibility:hidden!important}</style>
   <title>MAMU Marketplace</title>
   <link rel="stylesheet" href="./css/marketplace.css?v=admin-owner-only-2">
@@ -206,6 +206,6 @@
     let timer; document.getElementById("search").addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(loadProducts, 250); });
     loadProducts(); loadSeller(); if (token()) loadAdminApplications();
   </script>
-  <script src="/js/standalone-app-lock.js?v=2"></script>
+  <script src="/js/standalone-app-lock.js?v=5"></script>
 </body>
 </html>
