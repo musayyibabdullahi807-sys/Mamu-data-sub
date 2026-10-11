@@ -1639,54 +1639,6 @@ function setupSquadDashboardAccount() {
 function setupFundWallet() {
   const button = $("fundBtn");
   if (!button) return;
-  const fundingForm = $("paystackFundingForm");
-  const transferDetails = $("paystackTransferDetails");
-  let pollingReference = null;
-
-  const stopPolling = () => {
-    pollingReference = null;
-  };
-
-  const showFundingForm = () => {
-    stopPolling();
-    setButtonLoading(button, false, "Pay with Paystack");
-    if (fundingForm) fundingForm.hidden = false;
-    if (transferDetails) transferDetails.hidden = true;
-  };
-
-  const verifyTransfer = async (reference, expiresAt) => {
-    if (pollingReference !== reference) return;
-    if (Date.now() >= Date.parse(expiresAt)) {
-      $("paystackTransferStatus").textContent = "Lokacin transfer ya ƙare. Ka koma ka fara sabon request.";
-      stopPolling();
-      return;
-    }
-
-    try {
-      const result = await apiRequest(`/payment/verify/${encodeURIComponent(reference)}`);
-      if (result.success && !result.pending) {
-        stopPolling();
-        showToast(`An saka ₦${Number(result.amount || 0).toLocaleString()} a wallet ɗinka.`, "success");
-        showFundingForm();
-        await loadProfile();
-        await refreshHome();
-        await loadTransactions();
-        return;
-      }
-      $("paystackTransferStatus").textContent = "Ana jiran Paystack ya tabbatar da transfer ɗinka…";
-    } catch (error) {
-      if (error.paymentStatus === "failed" || error.paymentStatus === "reversed") {
-        $("paystackTransferStatus").textContent = "Paystack bai tabbatar da biyan ba. Ka koma ka fara sabon request.";
-        stopPolling();
-        return;
-      }
-      $("paystackTransferStatus").textContent = "Ba a samu tabbaci ba tukuna. Ana sake dubawa…";
-    }
-
-    if (pollingReference === reference) {
-      setTimeout(() => verifyTransfer(reference, expiresAt), 10000);
-    }
-  };
 
   button.addEventListener("click", async () => {
     const amount = Number($("fundAmount")?.value);
@@ -1701,21 +1653,11 @@ function setupFundWallet() {
         method: "POST",
         body: JSON.stringify({ amount }),
       });
-      if (!result.success || !result.reference || !result.transfer?.accountNumber || !result.transfer?.bankName) {
-        throw new Error(result.message || "Paystack bai dawo da bayanan transfer ba.");
+      if (!result.success || !result.reference || !result.authorizationUrl) {
+        throw new Error(result.message || "Paystack bai dawo da hanyar biyan kuɗi ba.");
       }
-
-      const transfer = result.transfer;
-      $("paystackTransferBank").textContent = transfer.bankName;
-      $("paystackTransferName").textContent = transfer.accountName || "—";
-      $("paystackTransferAccount").textContent = transfer.accountNumber;
-      $("paystackTransferAmount").textContent = `₦${Number(transfer.amount).toLocaleString()}`;
-      $("paystackTransferExpiry").textContent = new Date(transfer.accountExpiresAt).toLocaleString();
-      $("paystackTransferStatus").textContent = "Waiting for your transfer…";
-      if (fundingForm) fundingForm.hidden = true;
-      if (transferDetails) transferDetails.hidden = false;
-      pollingReference = result.reference;
-      setTimeout(() => verifyTransfer(result.reference, transfer.accountExpiresAt), 10000);
+      showToast("Ana buɗe Paystack Pay with Bank…", "success");
+      window.location.href = result.authorizationUrl;
     } catch (error) {
       console.error("Wallet funding error:", error);
       if (error.message !== "Unauthorized") {
@@ -1724,19 +1666,6 @@ function setupFundWallet() {
       setButtonLoading(button, false, "Continue with Paystack");
     }
   });
-
-  $("copyPaystackTransferAccount")?.addEventListener("click", async () => {
-    const accountNumber = $("paystackTransferAccount")?.textContent;
-    if (!accountNumber || accountNumber === "—") return;
-    try {
-      await navigator.clipboard.writeText(accountNumber);
-      showToast("An kwafi account number.", "success");
-    } catch (_) {
-      showToast("Ba a iya kwafin account number ba.", "error");
-    }
-  });
-
-  $("cancelPaystackTransfer")?.addEventListener("click", showFundingForm);
 }
 
 /* =========================================================
@@ -2267,6 +2196,11 @@ if (!reference) {
     const result = await apiRequest(
       `/payment/verify/${encodeURIComponent(reference)}`
     );
+
+    if (result.pending) {
+      showToast("Paystack yana tabbatar da biyan. Wallet zai sabunta idan an tabbatar.", "success");
+      return;
+    }
 
     if (result.success) {
       showToast(
