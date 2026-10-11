@@ -693,25 +693,17 @@
     <main class="page-content">
 
       <div class="form-card">
-        <div id="squadAccountDetails" class="manual-bank-account" hidden>
-          <p>Your personal transfer account</p>
-          <div class="manual-bank-row"><span>Bank</span><strong id="squadAccountBankName">—</strong></div>
-          <div class="manual-bank-row"><span>Account name</span><strong id="squadAccountName">—</strong></div>
-          <div class="manual-bank-row"><span>Account number</span><strong id="squadAccountNumber">—</strong></div>
-          <button id="copySquadAccountNumber" class="secondary-btn full-btn" type="button">Copy account number</button>
-          <p class="squad-funding-note">Transfer to this account to fund your MAMU wallet. Squad will notify MAMU when the transfer arrives.</p>
+        <div class="fund-option active">
+          <div>
+            <strong>Pay with Paystack</strong>
+            <span>Fund your wallet using Paystack</span>
+          </div>
         </div>
-        <form id="squadAccountForm" class="quick-service-form">
-          <h3>Get your personal bank account</h3>
-          <p class="squad-funding-note">Squad requires your identity details to assign an account to you. Your BVN is sent to Squad for verification and is not saved in MAMU.</p>
-          <div class="form-group"><label for="squadBvn">BVN</label><input id="squadBvn" type="password" inputmode="numeric" autocomplete="off" maxlength="11" pattern="[0-9]{11}" required placeholder="Enter your 11-digit BVN"></div>
-          <div class="form-group"><label for="squadDob">Date of birth</label><input id="squadDob" type="date" required></div>
-          <div class="form-group"><label for="squadGender">Gender</label><select id="squadGender" required><option value="">Select</option><option value="1">Male</option><option value="2">Female</option></select></div>
-          <div class="form-group"><label for="squadAddress">Residential address</label><textarea id="squadAddress" rows="3" maxlength="250" required placeholder="Enter your residential address"></textarea></div>
-          <label class="squad-consent"><input id="squadBvnConsent" type="checkbox" required><span>I agree that MAMU may send my BVN and details above to Squad to create my personal transfer account.</span></label>
-          <button id="createSquadAccountBtn" class="primary-btn full-btn" type="submit">Create my account number</button>
-          <p id="squadAccountStatus" class="quick-service-status" aria-live="polite"></p>
-        </form>
+        <div class="form-group">
+          <label for="fundAmount">Amount</label>
+          <input id="fundAmount" type="number" inputmode="decimal" min="100" placeholder="Enter amount">
+        </div>
+        <button id="fundBtn" class="primary-btn full-btn" type="button">Continue with Paystack</button>
       </div>
     </main>
   </section>

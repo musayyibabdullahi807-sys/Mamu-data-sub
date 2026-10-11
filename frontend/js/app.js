@@ -1594,7 +1594,7 @@ function setupReferralCopy() {
 /* =========================================================
    FUND WALLET
    ========================================================= */
-function setupSquadVirtualAccount() {
+function setupSquadDashboardAccount() {
   const form = $("squadAccountForm");
   const details = $("squadAccountDetails");
   const showAccount = (account) => {
@@ -1616,12 +1616,11 @@ function setupSquadVirtualAccount() {
     if (form && !hasAccount && $("squadAddress") && !$("squadAddress").value) $("squadAddress").value = profile?.address || "";
   };
   const copyNumber = async () => {
-    const number = $("squadAccountNumber")?.textContent || $("squadDashboardNumber")?.textContent?.replace("Account Number: ", "");
+    const number = $("squadDashboardNumber")?.textContent?.replace("Account Number: ", "");
     if (!number || number === "—") return;
     try { await navigator.clipboard.writeText(number); showToast("Account number copied.", "success"); }
     catch (_) { showToast("Could not copy account number.", "error"); }
   };
-  $("copySquadAccountNumber")?.addEventListener("click", copyNumber);
   $("copySquadDashboardAccount")?.addEventListener("click", copyNumber);
 
   const loadAccount = async () => {
@@ -1635,30 +1634,37 @@ function setupSquadVirtualAccount() {
   };
   window.loadSquadVirtualAccount = loadAccount;
   loadAccount();
+}
 
-  form?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const button = $("createSquadAccountBtn");
-    const status = $("squadAccountStatus");
-    const payload = {
-      bvn: $("squadBvn")?.value.trim(),
-      dob: $("squadDob")?.value,
-      gender: $("squadGender")?.value,
-      address: $("squadAddress")?.value.trim(),
-      bvnConsent: $("squadBvnConsent")?.checked === true,
-    };
-    setButtonLoading(button, true, "Creating account...");
-    if (status) status.textContent = "Sending your details securely to Squad…";
+function setupFundWallet() {
+  const button = $("fundBtn");
+  if (!button) return;
+
+  button.addEventListener("click", async () => {
+    const amount = Number($("fundAmount")?.value);
+    if (!Number.isFinite(amount) || amount < 100) {
+      showToast("Minimum funding amount is ₦100.", "error");
+      return;
+    }
+
+    setButtonLoading(button, true, "Preparing payment...");
     try {
-      const result = await apiRequest("/payment/squad/account", { method: "POST", body: JSON.stringify(payload) });
-      showAccount(result.account);
-      $("squadBvn").value = "";
-      if (status) status.textContent = "Your personal bank account is ready.";
-      showToast("Your Squad account number is ready.", "success");
+      const result = await apiRequest("/payment/initialize", {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      });
+      if (!result.success || !result.authorizationUrl) {
+        throw new Error(result.message || "Paystack checkout URL was not returned.");
+      }
+      showToast("Opening Paystack Checkout...", "success");
+      window.location.href = result.authorizationUrl;
     } catch (error) {
-      if (status) status.textContent = error.message || "Squad could not create your account.";
-      showToast(error.message || "Squad could not create your account.", "error");
-    } finally { setButtonLoading(button, false, "Create my account number"); }
+      console.error("Wallet funding error:", error);
+      if (error.message !== "Unauthorized") {
+        showToast(error.message || "Unable to start wallet funding.", "error");
+      }
+      setButtonLoading(button, false, "Continue with Paystack");
+    }
   });
 }
 
@@ -2178,7 +2184,6 @@ async function initApp() {
  
 async function handlePaystackCallback() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get("payment") === "squad" || params.has("squad_reference")) return;
   const reference = params.get("reference") || params.get("trxref");
 
 if (!reference) {
@@ -2217,7 +2222,8 @@ if (!reference) {
   }
 }
 
-setupSquadVirtualAccount();
+setupSquadDashboardAccount();
+setupFundWallet();
 handlePaystackCallback().catch((error) => {
   console.error("Paystack callback error:", error);
 });
