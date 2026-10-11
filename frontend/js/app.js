@@ -1292,7 +1292,6 @@ async function loadProfile() {
     }
 
     currentUser = data.user;
-    window.loadSquadVirtualAccount?.();
     updateWalletBalance(currentUser.walletBalance ?? 0);
 
 updateProfileUI(currentUser);
@@ -1594,46 +1593,103 @@ function setupReferralCopy() {
 /* =========================================================
    FUND WALLET
    ========================================================= */
-function setupSquadDashboardAccount() {
-  const form = $("squadAccountForm");
-  const details = $("squadAccountDetails");
-  const showAccount = (account) => {
-    const hasAccount = Boolean(account?.accountNumber);
-    if (details) details.hidden = !hasAccount;
-    if (form) form.hidden = hasAccount;
-    const bank = account?.bankName || "Squad Virtual Account";
-    const name = account?.accountName || "";
-    const number = account?.accountNumber || "";
-    if ($("squadAccountBankName")) $("squadAccountBankName").textContent = bank;
-    if ($("squadAccountName")) $("squadAccountName").textContent = name;
-    if ($("squadAccountNumber")) $("squadAccountNumber").textContent = number;
-    if ($("squadDashboardBank")) $("squadDashboardBank").textContent = hasAccount ? bank : "Personal bank account not set up";
-    if ($("squadDashboardAccountName")) $("squadDashboardAccountName").textContent = `Account Name: ${hasAccount ? name : "—"}`;
-    if ($("squadDashboardNumber")) $("squadDashboardNumber").textContent = `Account Number: ${hasAccount ? number : "—"}`;
-    if ($("copySquadDashboardAccount")) $("copySquadDashboardAccount").hidden = !hasAccount;
-    if ($("setupSquadDashboardAccount")) $("setupSquadDashboardAccount").hidden = hasAccount;
-    const profile = currentUser || (() => { try { return JSON.parse(localStorage.getItem("mamu_user") || "null"); } catch (_) { return null; } })();
-    if (form && !hasAccount && $("squadAddress") && !$("squadAddress").value) $("squadAddress").value = profile?.address || "";
-  };
-  const copyNumber = async () => {
-    const number = $("squadDashboardNumber")?.textContent?.replace("Account Number: ", "");
-    if (!number || number === "—") return;
-    try { await navigator.clipboard.writeText(number); showToast("Account number copied.", "success"); }
-    catch (_) { showToast("Could not copy account number.", "error"); }
-  };
-  $("copySquadDashboardAccount")?.addEventListener("click", copyNumber);
+function setupGenerateAccountNumber() {
+  const button = $("generateAccountNumberBtn");
+  const modal = $("paystackTransferModal");
+  let activeReference = null;
+  let pollingReference = null;
 
-  const loadAccount = async () => {
+  if (!button || !modal) return;
+
+  const closeModal = () => modal.classList.remove("active");
+  $("closePaystackTransferModal")?.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) closeModal();
+  });
+
+  $("copyPaystackTransferAccount")?.addEventListener("click", async () => {
+    const number = $("paystackTransferAccount")?.textContent?.trim();
+    if (!number || number === "—") return;
     try {
-      const result = await apiRequest("/payment/squad/account");
-      showAccount(result.account);
-    } catch (error) {
-      if ($("squadDashboardBank")) $("squadDashboardBank").textContent = error.message || "Could not load account details";
-      if ($("squadAccountStatus")) $("squadAccountStatus").textContent = error.message || "Could not load account details.";
+      await navigator.clipboard.writeText(number);
+      showToast("Account number copied.", "success");
+    } catch (_) {
+      showToast("Could not copy account number.", "error");
     }
+  });
+
+  const pollPayment = async (reference) => {
+    if (pollingReference === reference) return;
+    pollingReference = reference;
+    while (activeReference === reference) {
+      await new Promise((resolve) => setTimeout(resolve, 10000));
+      if (activeReference !== reference) break;
+      try {
+        const result = await apiRequest(`/payment/verify/${encodeURIComponent(reference)}`);
+        if (activeReference !== reference) break;
+        if (result.success && !result.pending) {
+          $("paystackTransferStatus").textContent = "Payment status: Successful. Your wallet has been credited.";
+          await Promise.all([loadWallet(), loadProfile(), loadTransactions()]);
+          showToast("Paystack transfer confirmed and wallet funded.", "success");
+          activeReference = null;
+          break;
+        }
+        $("paystackTransferStatus").textContent = `Payment status: ${result.paymentStatus || "Waiting for transfer"}.`;
+      } catch (error) {
+        if (error.message === "Unauthorized") {
+          activeReference = null;
+          break;
+        }
+        if (error.message === "Payment failed") {
+          $("paystackTransferStatus").textContent = "Payment status: Failed or expired. Generate a new transfer account to try again.";
+          activeReference = null;
+          break;
+        }
+        $("paystackTransferStatus").textContent = "Payment status: Waiting for transfer confirmation. Checking again…";
+      }
+    }
+    if (pollingReference === reference) pollingReference = null;
   };
-  window.loadSquadVirtualAccount = loadAccount;
-  loadAccount();
+
+  button.addEventListener("click", async () => {
+    const amount = Number($("dashboardFundingAmount")?.value);
+    const status = $("generateAccountStatus");
+    if (!Number.isFinite(amount) || amount < 100) {
+      showToast("Minimum funding amount is ₦100.", "error");
+      return;
+    }
+
+    setButtonLoading(button, true, "Generating account…");
+    if (status) status.textContent = "Requesting transfer details from Paystack…";
+    try {
+      const result = await apiRequest("/payment/bank-transfer/initialize", {
+        method: "POST",
+        body: JSON.stringify({ amount }),
+      });
+      const transfer = result.transfer;
+      if (!result.success || !result.reference || !transfer?.accountNumber || !transfer?.bankName) {
+        throw new Error(result.message || "Paystack did not provide transfer account details.");
+      }
+
+      activeReference = result.reference;
+      $("paystackTransferBank").textContent = transfer.bankName;
+      $("paystackTransferName").textContent = transfer.accountName || "Not provided by Paystack";
+      $("paystackTransferAccount").textContent = transfer.accountNumber;
+      $("paystackTransferAmount").textContent = `₦${Number(transfer.amount).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
+      $("paystackTransferExpiry").textContent = transfer.accountExpiresAt
+        ? new Date(transfer.accountExpiresAt).toLocaleString()
+        : "Not provided by Paystack";
+      $("paystackTransferStatus").textContent = `Payment status: ${result.paymentStatus || "Waiting for transfer"}.`;
+      modal.classList.add("active");
+      if (status) status.textContent = "Transfer account generated. Complete the transfer shown in the popup.";
+      pollPayment(result.reference);
+    } catch (error) {
+      if (status) status.textContent = error.message || "Could not generate a transfer account.";
+      showToast(error.message || "Could not generate a transfer account.", "error");
+    } finally {
+      setButtonLoading(button, false, "Generate Account Number");
+    }
+  });
 }
 
 function setupFundWallet() {
@@ -1654,9 +1710,9 @@ function setupFundWallet() {
         body: JSON.stringify({ amount }),
       });
       if (!result.success || !result.reference || !result.authorizationUrl) {
-        throw new Error(result.message || "Paystack bai dawo da hanyar biyan kuɗi ba.");
+        throw new Error(result.message || "Paystack did not return a checkout URL.");
       }
-      showToast("Ana buɗe Paystack Pay with Bank…", "success");
+      showToast("Opening Paystack Checkout…", "success");
       window.location.href = result.authorizationUrl;
     } catch (error) {
       console.error("Wallet funding error:", error);
@@ -2227,7 +2283,7 @@ if (!reference) {
   }
 }
 
-setupSquadDashboardAccount();
+setupGenerateAccountNumber();
 setupFundWallet();
 handlePaystackCallback().catch((error) => {
   console.error("Paystack callback error:", error);

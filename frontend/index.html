@@ -78,18 +78,18 @@
       </section>
 
 
-      <!-- USER'S PERSONAL SQUAD TRANSFER ACCOUNT -->
-      <section class="virtual-card" id="squadDashboardAccountCard">
+      <section class="virtual-card" id="generateAccountNumberCard">
         <div>
-          <span class="section-label">My Squad Transfer Account</span>
-          <h3 id="squadDashboardBank">Loading account details…</h3>
-          <p id="squadDashboardAccountName">Account Name: —</p>
-          <p id="squadDashboardNumber">Account Number: —</p>
+          <span class="section-label">Wallet Funding</span>
+          <h3>Generate Account Number</h3>
+          <p>Enter an amount to get your transfer account details.</p>
         </div>
-        <div class="squad-dashboard-account-actions">
-          <button id="copySquadDashboardAccount" class="small-btn" type="button" hidden>Copy</button>
-          <button id="setupSquadDashboardAccount" class="small-btn" type="button" data-page="fundPage" hidden>Get my account</button>
+        <div class="form-group">
+          <label for="dashboardFundingAmount">Amount (₦)</label>
+          <input id="dashboardFundingAmount" type="number" inputmode="decimal" min="100" step="0.01" placeholder="Enter amount">
         </div>
+        <button id="generateAccountNumberBtn" class="primary-btn full-btn" type="button">Generate Account Number</button>
+        <p id="generateAccountStatus" class="quick-service-status" aria-live="polite"></p>
       </section>
 
       <!-- QUICK SERVICES -->
@@ -824,6 +824,20 @@
   capture="user"
   hidden
 >
+<div id="paystackTransferModal" class="modal-overlay">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="paystackTransferTitle">
+    <h2 id="paystackTransferTitle">Transfer to this account</h2>
+    <p>Send the exact amount shown below. Your wallet will be credited after Paystack confirms the payment.</p>
+    <div class="manual-bank-row"><span>Bank name</span><strong id="paystackTransferBank">—</strong></div>
+    <div class="manual-bank-row"><span>Account name</span><strong id="paystackTransferName">—</strong></div>
+    <div class="manual-bank-row"><span>Account number</span><strong id="paystackTransferAccount">—</strong></div>
+    <div class="manual-bank-row"><span>Amount to transfer</span><strong id="paystackTransferAmount">—</strong></div>
+    <div class="manual-bank-row"><span>Expires</span><strong id="paystackTransferExpiry">—</strong></div>
+    <button id="copyPaystackTransferAccount" class="secondary-btn full-btn" type="button">Copy account number</button>
+    <p id="paystackTransferStatus" class="manual-funding-note" aria-live="polite">Payment status: Waiting for transfer</p>
+    <button id="closePaystackTransferModal" class="primary-btn full-btn" type="button">Close</button>
+  </div>
+</div>
 <div id="photoChoiceModal" class="modal-overlay">
   <div class="modal-box">
     <h2>Profile Photo</h2>
@@ -1470,7 +1484,7 @@
   </section>
 </div>
 
-<script src="./js/app.js?v=paystack-bank-channel-1"></script>
+<script src="./js/app.js?v=paystack-dashboard-transfer-1"></script>
 <script src="./js/marketplace-product-detail.js?v=hide-nav-1"></script>
 <script src="./js/marketplace-blob-client.bundle.js?v=vercel-blob-1"></script>
 <script src="./js/marketplace.js?v=business-admin-controls-2"></script>
