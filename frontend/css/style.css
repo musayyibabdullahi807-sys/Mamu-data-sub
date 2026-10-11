@@ -3266,33 +3266,34 @@ textarea:focus {
 
 
 /* App relock after inactivity/background */
-.app-lock-screen { position:fixed; inset:0; z-index:20000; display:none; align-items:center; justify-content:center; padding:20px; background:#f4f7fc; color:#132238; }
+.app-lock-screen { position:fixed; inset:0; z-index:20000; display:none; align-items:flex-start; justify-content:center; overflow:auto; padding:0 18px 28px; background:var(--mamu-bg); color:var(--mamu-text); font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; }
 .app-lock-screen.active { display:flex; }
-.app-lock-card { width:min(100%,360px); text-align:center; padding:28px 22px; border-radius:24px; background:#fff; box-shadow:0 18px 55px rgba(15,35,65,.16); }
-.app-lock-mark { width:58px; height:58px; margin:0 auto 14px; display:grid; place-items:center; border-radius:18px; background:#2563eb; color:#fff; font-size:28px; font-weight:800; }
-.app-lock-card h1 { margin:0 0 7px; font-size:23px; }
-.app-lock-card>p { margin:0 0 14px; color:#64748b; font-size:14px; }
+.app-lock-brand { position:absolute; inset:0 0 auto; height:330px; padding:48px 20px 115px; text-align:center; color:#fff; background:linear-gradient(135deg,var(--mamu-primary-dark),var(--mamu-primary)); }
+.app-lock-brand::after { content:""; position:absolute; left:0; bottom:-1px; width:100%; height:105px; background:var(--mamu-surface); border-radius:0 0 48% 16% / 0 0 16% 8%; }
+.app-lock-mark { width:76px; height:76px; margin:0 auto 17px; display:grid; place-items:center; border:2px solid #fff; border-radius:22px; background:var(--mamu-primary-dark); color:#fff; font-size:30px; font-weight:900; }
+.app-lock-brand h1 { margin:0; color:#fff; font-size:25px; font-weight:900; letter-spacing:-.7px; }
+.app-lock-brand p { margin:8px 0 0; color:#aaa; font-size:13px; }
+.app-lock-card { position:relative; z-index:1; width:min(100%,394px); margin:275px auto 0; padding:28px 21px 24px; border:1px solid var(--mamu-border); border-radius:26px; background:var(--mamu-surface); color:var(--mamu-text); text-align:center; box-shadow:0 15px 45px rgba(0,0,0,.12); }
+.app-lock-card h2 { margin:0 0 7px; color:var(--mamu-text); font-size:23px; font-weight:900; }
+.app-lock-card>p { margin:0 0 14px; color:var(--mamu-muted); font-size:14px; }
 .app-lock-pin { width:1px!important; height:1px!important; position:absolute!important; opacity:0!important; pointer-events:none!important; }
-.app-lock-keypad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0; }
-.app-lock-keypad button { min-height:52px; border:1px solid #e1e8f2; border-radius:15px; background:#f8faff; color:#132238; font-size:21px; font-weight:700; }
-.app-lock-keypad button:active { background:#dce9ff; }
-.app-lock-keypad .app-lock-action { font-size:14px; color:#475569; }
-.app-lock-message { min-height:20px; margin:4px 0!important; color:#d14343!important; font-size:13px!important; }
+.app-lock-keypad { display:grid; grid-template-columns:repeat(3,58px); justify-content:center; gap:11px 20px; margin:14px 0; }
+.app-lock-keypad button { width:58px; height:58px; padding:0; border:1px solid var(--mamu-border); border-radius:50%; background:var(--mamu-surface); color:var(--mamu-text); font-size:21px; font-weight:700; box-shadow:0 3px 10px rgba(0,0,0,.06); }
+.app-lock-keypad button:active { background:var(--mamu-primary); color:#fff; }
+.app-lock-keypad .app-lock-action { font-size:12px; }
+.app-lock-message { min-height:20px; margin:4px 0!important; color:#c62828!important; font-size:13px!important; }
+.app-lock-dots { display:flex; justify-content:center; gap:13px; margin:10px 0 14px; }
+.app-lock-dots i { width:11px; height:11px; border:2px solid var(--mamu-muted); border-radius:50%; }
+.app-lock-dots i.filled { border-color:var(--mamu-primary); background:var(--mamu-primary); }
+.app-lock-biometric { width:100%; margin:0 0 12px; border-radius:12px!important; }
+#appLockLogout { width:100%; border-radius:12px; }
 html.app-is-locked #app { filter:blur(5px); pointer-events:none; user-select:none; }
 html[data-app-lock-required="true"] #app { filter:blur(5px); pointer-events:none; user-select:none; }
-html[data-theme="dark"] .app-lock-screen { background:#0b1220; color:#e5e7eb; }
-html[data-theme="dark"] .app-lock-card { background:#111c2e; }
-html[data-theme="dark"] .app-lock-card h1 { color:#e5e7eb; }
-html[data-theme="dark"] .app-lock-card>p { color:#a0aec0; }
-html[data-theme="dark"] .app-lock-keypad button { background:#17243a; border-color:#29364a; color:#e5e7eb; }
-
-.app-lock-dots { display:flex; justify-content:center; gap:13px; margin:10px 0 14px; }
-.app-lock-dots i { width:11px; height:11px; border:2px solid #94a3b8; border-radius:50%; }
-.app-lock-dots i.filled { border-color:#2563eb; background:#2563eb; }
-html[data-theme="dark"] .app-lock-dots i { border-color:#64748b; }
-html[data-theme="dark"] .app-lock-dots i.filled { border-color:#60a5fa; background:#60a5fa; }
-
 html[data-app-lock-required="true"] .app-lock-screen { display:flex; }
+html[data-theme="dark"] .app-lock-brand { background:linear-gradient(135deg,#1e40af,#2563eb); }
+html[data-theme="dark"] .app-lock-card { box-shadow:0 15px 45px rgba(0,0,0,.4); }
+html[data-theme="dark"] .app-lock-keypad button { box-shadow:0 3px 10px rgba(0,0,0,.25); }
+@media (max-height:700px) { .app-lock-brand { height:260px; padding-top:24px; } .app-lock-brand::after { height:75px; } .app-lock-card { margin-top:215px; padding-top:20px; } .app-lock-keypad { gap:7px 18px; margin:10px 0; } .app-lock-keypad button { width:50px; height:50px; } }
 
 .balance-toggle { display:inline-grid; place-items:center; width:38px; height:34px; padding:0; border-radius:10px; cursor:pointer; }
 .balance-eye-icon { display:block; width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
@@ -3323,3 +3324,7 @@ html, body { overscroll-behavior-y: contain; }
 .manual-bank-account button{margin-top:10px}.manual-funding-note{font-size:13px;line-height:1.5;color:#64748b}
 html[data-theme="dark"] .manual-bank-account{background:#0f1929;border-color:#29364a}
 html[data-theme="dark"] .manual-bank-row{border-color:#29364a}
+
+.squad-funding-note{font-size:13px;line-height:1.5;color:var(--mamu-muted);margin-top:12px}
+
+.squad-consent{display:flex;align-items:flex-start;gap:9px;color:var(--mamu-muted);font-size:12px;line-height:1.5}.squad-consent input{width:18px;min-width:18px;margin-top:1px;accent-color:var(--mamu-primary)}.squad-dashboard-account-actions{display:grid;gap:8px;align-content:center}.squad-funding-note{font-size:13px;line-height:1.5;color:var(--mamu-muted);margin:10px 0}

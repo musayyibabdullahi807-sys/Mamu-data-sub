@@ -48,6 +48,7 @@
       if (!response.ok) throw new Error(data.message || "Could not load your businesses.");
       const sellers = data.sellers || (data.seller ? [data.seller] : []);
       area.textContent = sellers.length ? "Business approval status:" : "You have no registered businesses yet.";
+      document.getElementById("marketSellerForm").hidden = sellers.length > 0;
       const approved = sellers.filter((seller) => seller.status === "approved");
       const select = document.getElementById("marketBusinessSelect");
       select.innerHTML = approved.map((seller) => `<option value="${escapeHtml(seller.id)}">${escapeHtml(seller.businessName)}</option>`).join("");
@@ -95,7 +96,6 @@
     const products = sellers.flatMap((seller) => (seller.products || []).map((product) => ({ ...product, shop:product.shop || { businessName:seller.businessName, city:seller.city, state:seller.state } })));
     list._products = products;
     list.innerHTML = products.length ? products.map((product) => `<article class="market-product" data-my-product-id="${escapeHtml(product.id)}" role="button" tabindex="0">${product.imageUrls?.[0] ? `<img src="${escapeHtml(product.imageUrls[0])}" alt="${escapeHtml(product.name)}" loading="lazy">` : product.videoUrl ? '<div class="market-video-cover">▶</div>' : '<div class="market-no-image">No image</div>'}<div class="market-product-body"><h3>${escapeHtml(product.name)}</h3><div class="market-price">${money(product.priceKobo)}</div><p class="market-meta">${escapeHtml(product.shop.businessName)}</p><p class="market-meta">${escapeHtml(product.category)} · Stock: ${product.stock}</p></div></article>`).join("") : '<div class="market-status">You have not listed any products yet.</div>';
-    list.scrollIntoView({ behavior:"smooth", block:"start" });
   };
   document.getElementById("marketMyProductsButton").addEventListener("click", () => { document.getElementById("marketMenu").hidden = true; window.showMarketplaceMyProducts(); });
   document.getElementById("marketMyProducts").addEventListener("click", (event) => {
@@ -116,7 +116,6 @@
     document.getElementById("marketSellerForm").hidden = true;
     document.getElementById("marketListingSection").hidden = true;
     await Promise.all([loadSellerStatus(), loadAdminApplications()]);
-    document.getElementById("marketShopPanel").scrollIntoView({ behavior:"smooth", block:"start" });
   });
   document.getElementById("marketAddBusiness").addEventListener("click", async () => {
     document.getElementById("marketMenu").hidden = true;
@@ -128,9 +127,12 @@
     document.getElementById("marketSellerStatus").hidden = true;
     document.getElementById("marketSellerForm").hidden = false;
     document.getElementById("marketAdminSection").hidden = true;
-    await loadSellerStatus();
+    const sellers = await loadSellerStatus();
     document.getElementById("marketListingSection").hidden = true;
-    document.getElementById("marketSellerForm").scrollIntoView({ behavior:"smooth", block:"center" });
+    if (sellers.length) {
+      document.getElementById("marketSellerStatus").hidden = false;
+      document.getElementById("marketSellerStatus").textContent = "Each user can register only one business. Your existing application is shown under My businesses.";
+    }
   });
   document.getElementById("marketAddProduct").addEventListener("click", async () => {
     document.getElementById("marketMenu").hidden = true;
@@ -148,10 +150,9 @@
       const status = document.getElementById("marketSellerStatus");
       status.hidden = false;
       status.textContent = sellers.length ? "No business is approved yet. Products become available after approval." : "Register a business first, then wait for approval to add products.";
-      status.scrollIntoView({ behavior:"smooth", block:"center" }); return;
+      return;
     }
     document.getElementById("marketListingSection").hidden = false;
-    document.getElementById("marketListingSection").scrollIntoView({ behavior:"smooth", block:"center" });
   });
   document.getElementById("marketRefresh").addEventListener("click", refreshMarketplace);
   let searchTimer;

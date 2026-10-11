@@ -10,9 +10,20 @@ const APP_LOCK_KEY = "mamu_app_locked_at";
 const APP_LOCK_STATE_KEY = "mamu_app_is_locked";
 const APP_LOCK_DELAY = 10 * 1000;
 
+function getAccountThemeKey(user = null) {
+  try {
+    const account = user || JSON.parse(localStorage.getItem("mamu_user") || "null");
+    const accountId = account?._id || account?.id || account?.userId || account?.phone;
+    return accountId ? `${THEME_KEY}_${encodeURIComponent(String(accountId))}` : null;
+  } catch (_) { return null; }
+}
+
 function applySavedTheme() {
   let dark = false;
-  try { dark = localStorage.getItem(THEME_KEY) === "dark"; } catch (_) {}
+  try {
+    const accountThemeKey = getAccountThemeKey();
+    dark = accountThemeKey ? localStorage.getItem(accountThemeKey) === "dark" : false;
+  } catch (_) {}
   document.documentElement.dataset.theme = dark ? "dark" : "light";
   const toggle = document.getElementById("settingsDarkModeToggle");
   if (toggle) toggle.checked = dark;
@@ -1281,6 +1292,7 @@ async function loadProfile() {
     }
 
     currentUser = data.user;
+    window.loadSquadVirtualAccount?.();
     updateWalletBalance(currentUser.walletBalance ?? 0);
 
 updateProfileUI(currentUser);
@@ -1582,62 +1594,71 @@ function setupReferralCopy() {
 /* =========================================================
    FUND WALLET
    ========================================================= */
-function setupFundWallet() {
-  const button = $("fundBtn");
-  const accountBox = $("manualBankAccount");
-  if (!button) return;
+function setupSquadVirtualAccount() {
+  const form = $("squadAccountForm");
+  const details = $("squadAccountDetails");
+  const showAccount = (account) => {
+    const hasAccount = Boolean(account?.accountNumber);
+    if (details) details.hidden = !hasAccount;
+    if (form) form.hidden = hasAccount;
+    const bank = account?.bankName || "Squad Virtual Account";
+    const name = account?.accountName || "";
+    const number = account?.accountNumber || "";
+    if ($("squadAccountBankName")) $("squadAccountBankName").textContent = bank;
+    if ($("squadAccountName")) $("squadAccountName").textContent = name;
+    if ($("squadAccountNumber")) $("squadAccountNumber").textContent = number;
+    if ($("squadDashboardBank")) $("squadDashboardBank").textContent = hasAccount ? bank : "Personal bank account not set up";
+    if ($("squadDashboardAccountName")) $("squadDashboardAccountName").textContent = `Account Name: ${hasAccount ? name : "—"}`;
+    if ($("squadDashboardNumber")) $("squadDashboardNumber").textContent = `Account Number: ${hasAccount ? number : "—"}`;
+    if ($("copySquadDashboardAccount")) $("copySquadDashboardAccount").hidden = !hasAccount;
+    if ($("setupSquadDashboardAccount")) $("setupSquadDashboardAccount").hidden = hasAccount;
+    const profile = currentUser || (() => { try { return JSON.parse(localStorage.getItem("mamu_user") || "null"); } catch (_) { return null; } })();
+    if (form && !hasAccount && $("squadAddress") && !$("squadAddress").value) $("squadAddress").value = profile?.address || "";
+  };
+  const copyNumber = async () => {
+    const number = $("squadAccountNumber")?.textContent || $("squadDashboardNumber")?.textContent?.replace("Account Number: ", "");
+    if (!number || number === "—") return;
+    try { await navigator.clipboard.writeText(number); showToast("Account number copied.", "success"); }
+    catch (_) { showToast("Could not copy account number.", "error"); }
+  };
+  $("copySquadAccountNumber")?.addEventListener("click", copyNumber);
+  $("copySquadDashboardAccount")?.addEventListener("click", copyNumber);
 
-  const escapeHtml = (value) => String(value || "").replace(/[&<>"']/g, (char) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[char]));
-  const loadBankDetails = async () => {
-    if (!accountBox) return;
+  const loadAccount = async () => {
     try {
-      const data = await apiRequest("/wallet/manual-transfer/details");
-      if (!data.configured || !data.account) {
-        accountBox.innerHTML = "<p>Bank transfer details are not available yet. Please check again later.</p>";
-        button.disabled = true;
-        return;
-      }
-      accountBox.innerHTML = `<div class="manual-bank-row"><span>Bank</span><strong>${escapeHtml(data.account.bankName)}</strong></div><div class="manual-bank-row"><span>Account name</span><strong>${escapeHtml(data.account.accountName)}</strong></div><div class="manual-bank-row"><span>Account number</span><strong id="manualBankNumber">${escapeHtml(data.account.accountNumber)}</strong></div><button id="copyManualBankNumber" class="secondary-btn full-btn" type="button">Copy account number</button>`;
-      $("copyManualBankNumber")?.addEventListener("click", async () => {
-        try { await navigator.clipboard.writeText(data.account.accountNumber); showToast("Account number copied.", "success"); }
-        catch (_) { showToast("Could not copy account number.", "error"); }
-      });
-      button.disabled = false;
+      const result = await apiRequest("/payment/squad/account");
+      showAccount(result.account);
     } catch (error) {
-      accountBox.innerHTML = `<p>${escapeHtml(error.message || "Could not load bank details.")}</p>`;
-      button.disabled = true;
+      if ($("squadDashboardBank")) $("squadDashboardBank").textContent = error.message || "Could not load account details";
+      if ($("squadAccountStatus")) $("squadAccountStatus").textContent = error.message || "Could not load account details.";
     }
   };
-  loadBankDetails();
+  window.loadSquadVirtualAccount = loadAccount;
+  loadAccount();
 
-  button.addEventListener("click", async () => {
-    const amount = Number($("fundAmount")?.value);
-    const senderName = $("fundSenderName")?.value.trim();
-    const senderBank = $("fundSenderBank")?.value.trim();
-    const transferReference = $("fundTransferReference")?.value.trim();
-    if (!Number.isSafeInteger(amount) || amount < 100) {
-      showToast("Enter a whole amount of at least ₦100.", "error"); return;
-    }
-    if (!senderName || !senderBank) {
-      showToast("Enter the sender name and sending bank.", "error"); return;
-    }
-    setButtonLoading(button, true, "Submitting request...");
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = $("createSquadAccountBtn");
+    const status = $("squadAccountStatus");
+    const payload = {
+      bvn: $("squadBvn")?.value.trim(),
+      dob: $("squadDob")?.value,
+      gender: $("squadGender")?.value,
+      address: $("squadAddress")?.value.trim(),
+      bvnConsent: $("squadBvnConsent")?.checked === true,
+    };
+    setButtonLoading(button, true, "Creating account...");
+    if (status) status.textContent = "Sending your details securely to Squad…";
     try {
-      const result = await apiRequest("/wallet/manual-transfer/requests", {
-        method: "POST",
-        body: JSON.stringify({ amount, senderName, senderBank, transferReference }),
-      });
-      $("manualFundingStatus").textContent = `${result.message} Reference: ${result.reference}`;
-      $("fundAmount").value = "";
-      $("fundSenderName").value = "";
-      $("fundSenderBank").value = "";
-      $("fundTransferReference").value = "";
-      showToast("Transfer details submitted for confirmation.", "success");
-      setButtonLoading(button, false, "Submit transfer details");
+      const result = await apiRequest("/payment/squad/account", { method: "POST", body: JSON.stringify(payload) });
+      showAccount(result.account);
+      $("squadBvn").value = "";
+      if (status) status.textContent = "Your personal bank account is ready.";
+      showToast("Your Squad account number is ready.", "success");
     } catch (error) {
-      showToast(error.message || "Could not submit transfer details.", "error");
-      setButtonLoading(button, false, "Submit transfer details");
-    }
+      if (status) status.textContent = error.message || "Squad could not create your account.";
+      showToast(error.message || "Squad could not create your account.", "error");
+    } finally { setButtonLoading(button, false, "Create my account number"); }
   });
 }
 
@@ -1671,9 +1692,8 @@ function setupAppLock() {
   const input = $("appLockPin");
   const dots = $("appLockDots");
   const message = $("appLockMessage");
-  const unlockButton = $("appLockUnlock");
   const biometricButton = $("appLockBiometric");
-  if (!screen || !input || !unlockButton) return;
+  if (!screen || !input) return;
 
   const fromBase64Url = (value) => {
     const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
@@ -1781,7 +1801,10 @@ function setupAppLock() {
 
   screen.querySelectorAll("[data-lock-digit]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (locked && input.value.length < 4) { input.value += button.dataset.lockDigit; updateDots(); }
+      if (locked && !busy && input.value.length < 4) {
+        input.value += button.dataset.lockDigit; updateDots();
+        if (input.value.length === 4) verifyPin();
+      }
     });
   });
   screen.querySelector('[data-lock-action="clear"]')?.addEventListener("click", () => { input.value = ""; updateDots(); });
@@ -1826,14 +1849,9 @@ function setupAppLock() {
     }
   });
 
-  unlockButton.addEventListener("click", async () => {
-    if (!locked || busy) return;
-    if (!/^\d{4}$/.test(input.value)) {
-      message.textContent = "Enter all 4 digits.";
-      return;
-    }
+  async function verifyPin() {
+    if (!locked || busy || !/^\d{4}$/.test(input.value)) return;
     busy = true;
-    unlockButton.disabled = true;
     message.textContent = "Checking PIN…";
     try {
       const response = await fetch(`${API_BASE}/security/transaction-pin/verify`, {
@@ -1842,33 +1860,21 @@ function setupAppLock() {
         body: JSON.stringify({ pin: input.value }),
       });
       const result = await response.json().catch(() => ({}));
-      if (response.ok && result.success) {
-        setLocked(false);
-        return;
-      }
+      if (response.ok && result.success) { setLocked(false); return; }
       if (response.status === 400 && /transaction pin has not been created/i.test(result.message || "")) {
-        setLocked(false);
-        openTransactionPinModal();
-        return;
+        setLocked(false); openTransactionPinModal(); return;
       }
       if (response.status === 401 && !/incorrect transaction pin/i.test(result.message || "")) {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem("mamu_user");
-        localStorage.removeItem(APP_LOCK_KEY);
-        localStorage.removeItem(APP_LOCK_STATE_KEY);
-        window.location.href = "./login.html";
-        return;
+        localStorage.removeItem(TOKEN_KEY); localStorage.removeItem("mamu_user");
+        localStorage.removeItem(APP_LOCK_KEY); localStorage.removeItem(APP_LOCK_STATE_KEY);
+        window.location.href = "./login.html"; return;
       }
-      input.value = "";
-      updateDots();
+      input.value = ""; updateDots();
       message.textContent = response.status === 401 ? "Incorrect PIN. Try again." : (result.message || "Could not verify PIN. Try again.");
     } catch (_) {
       message.textContent = "Could not connect. Check your connection and try again.";
-    } finally {
-      busy = false;
-      unlockButton.disabled = false;
-    }
-  });
+    } finally { busy = false; }
+  }
 }
 
 function setupSignOut() {
@@ -1888,10 +1894,13 @@ function setupSettings() {
   const darkModeToggle = $("settingsDarkModeToggle");
   const applyTheme = (dark) => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
-    try { localStorage.setItem(THEME_KEY, dark ? "dark" : "light"); } catch (_) {}
+    try {
+      const accountThemeKey = getAccountThemeKey(currentUser);
+      if (accountThemeKey) localStorage.setItem(accountThemeKey, dark ? "dark" : "light");
+    } catch (_) {}
   };
   if (darkModeToggle) {
-    try { darkModeToggle.checked = localStorage.getItem(THEME_KEY) === "dark"; } catch (_) { darkModeToggle.checked = false; }
+    darkModeToggle.checked = document.documentElement.dataset.theme === "dark";
     darkModeToggle.addEventListener("change", () => applyTheme(darkModeToggle.checked));
   }
 
@@ -2169,9 +2178,8 @@ async function initApp() {
  
 async function handlePaystackCallback() {
   const params = new URLSearchParams(window.location.search);
-  const reference =
-  params.get("reference") ||
-  params.get("trxref");
+  if (params.get("payment") === "squad" || params.has("squad_reference")) return;
+  const reference = params.get("reference") || params.get("trxref");
 
 if (!reference) {
   return;
@@ -2207,7 +2215,9 @@ if (!reference) {
       "error"
     );
   }
-} setupFundWallet();
+}
+
+setupSquadVirtualAccount();
 handlePaystackCallback().catch((error) => {
   console.error("Paystack callback error:", error);
 });

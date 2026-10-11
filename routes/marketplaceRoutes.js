@@ -26,14 +26,21 @@ const adminOnly = (req, res, next) => {
   if (userId !== MARKETPLACE_ADMIN_USER_ID) return res.status(403).json({ success: false, message: "Marketplace administrator access required" });
   next();
 };
-let ownerIndexMigration;
-async function removeLegacyUniqueOwnerIndex() {
-  if (!ownerIndexMigration) ownerIndexMigration = (async () => {
-    const indexes = await Seller.collection.indexes();
-    const legacy = indexes.find((index) => index.unique && index.key?.owner === 1);
-    if (legacy) await Seller.collection.dropIndex(legacy.name);
-  })();
-  return ownerIndexMigration;
+async function deleteSellerProducts(sellerIds) {
+  if (!sellerIds.length) return;
+  const products = await Product.find({ seller: { $in: sellerIds } }).select("imageUrls videoUrl").lean();
+  await Product.deleteMany({ seller: { $in: sellerIds } });
+  const mediaUrls = products.flatMap((product) => [...(product.imageUrls || []), product.videoUrl]).filter(Boolean);
+  await Promise.allSettled(mediaUrls.map(async (url) => {
+    if (url.startsWith("https://") && isAllowedMediaUrl(url) && process.env.BLOB_READ_WRITE_TOKEN) {
+      await deleteBlob(url);
+      return;
+    }
+    const match = /^\/uploads\/marketplace\/([a-f0-9-]+\.(?:jpg|png|webp|mp4|mov|webm|3gp))$/i.exec(url);
+    if (!match) return;
+    const filePath = path.join(__dirname, "..", "frontend", "uploads", "marketplace", path.basename(match[1]));
+    try { await fs.unlink(filePath); } catch (error) { if (error.code !== "ENOENT") throw error; }
+  }));
 }
 const sellerView = (seller) => ({
   id: seller._id, businessName: seller.businessName, phone: seller.phone,
@@ -57,8 +64,22 @@ router.post("/seller-applications", protect, async (req, res) => {
   try {
     const details = { businessName: text(req.body.businessName, 120), phone: text(req.body.phone, 20), address: text(req.body.address, 300), city: text(req.body.city, 80), state: text(req.body.state, 80) };
     if (Object.values(details).some((v) => !v)) return res.status(400).json({ success: false, message: "Business name, phone, full address, city and state are required" });
-    await removeLegacyUniqueOwnerIndex();
-    const seller = await Seller.create({ ...details, owner: req.user._id, status: "pending", applicationHistory: [{ ...details, submittedAt: new Date() }] });
+    if (await Seller.exists({ owner: req.user._id })) {
+      return res.status(409).json({ success: false, message: "Each user can register only one business." });
+    }
+    const seller = new Seller({ ...details, owner: req.user._id, status: "pending", applicationHistory: [{ ...details, submittedAt: new Date() }] });
+    const claimedUser = await User.findOneAndUpdate(
+      { _id: req.user._id, marketplaceBusinessId: null },
+      { $set: { marketplaceBusinessId: seller._id } },
+      { new: true },
+    ).select("_id");
+    if (!claimedUser) return res.status(409).json({ success: false, message: "Each user can register only one business." });
+    try {
+      await seller.save();
+    } catch (error) {
+      await User.updateOne({ _id: req.user._id, marketplaceBusinessId: seller._id }, { $unset: { marketplaceBusinessId: 1 } });
+      throw error;
+    }
     return res.status(201).json({ success: true, seller: sellerView(seller) });
   } catch (error) { return res.status(500).json({ success: false, message: "Could not submit seller application" }); }
 });
@@ -102,6 +123,28 @@ router.get("/admin/users", protect, adminOnly, async (req, res) => {
   }
 });
 
+router.patch("/admin/users/:id", protect, adminOnly, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid user id" });
+  if (String(req.params.id).toLowerCase() === MARKETPLACE_ADMIN_USER_ID) return res.status(403).json({ success: false, message: "The administrator account cannot be changed here." });
+  if (!["active", "suspended"].includes(req.body.accountStatus)) return res.status(400).json({ success: false, message: "Account status must be active or suspended." });
+  const user = await User.findByIdAndUpdate(req.params.id, { $set: { accountStatus: req.body.accountStatus } }, { new: true }).select("_id accountStatus");
+  if (!user) return res.status(404).json({ success: false, message: "User not found." });
+  return res.json({ success: true, user: { id: String(user._id), accountStatus: user.accountStatus } });
+});
+
+router.delete("/admin/users/:id", protect, adminOnly, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid user id" });
+  if (String(req.params.id).toLowerCase() === MARKETPLACE_ADMIN_USER_ID) return res.status(403).json({ success: false, message: "The administrator account cannot be deleted here." });
+  const user = await User.findById(req.params.id).select("_id");
+  if (!user) return res.status(404).json({ success: false, message: "User not found." });
+  const sellers = await Seller.find({ owner: user._id }).select("_id");
+  const sellerIds = sellers.map((seller) => seller._id);
+  await deleteSellerProducts(sellerIds);
+  await Seller.deleteMany({ _id: { $in: sellerIds } });
+  await User.deleteOne({ _id: user._id });
+  return res.json({ success: true, message: "User account and marketplace businesses were permanently deleted." });
+});
+
 router.get("/admin/seller-applications", protect, adminOnly, async (req, res) => {
   const status = ["pending", "approved", "rejected", "suspended", "all"].includes(req.query.status) ? req.query.status : "pending";
   const filter = status === "all" ? {} : { status };
@@ -120,6 +163,16 @@ router.patch("/admin/seller-applications/:id", protect, adminOnly, async (req, r
   }, { new: true, runValidators: true });
   if (!seller) return res.status(404).json({ success: false, message: "Application not found" });
   return res.json({ success: true, seller: sellerView(seller) });
+});
+
+router.delete("/admin/seller-applications/:id", protect, adminOnly, async (req, res) => {
+  if (!mongoose.isValidObjectId(req.params.id)) return res.status(400).json({ success: false, message: "Invalid business id" });
+  const seller = await Seller.findById(req.params.id).select("_id owner");
+  if (!seller) return res.status(404).json({ success: false, message: "Business not found." });
+  await deleteSellerProducts([seller._id]);
+  await Seller.deleteOne({ _id: seller._id });
+  await User.updateOne({ _id: seller.owner, marketplaceBusinessId: seller._id }, { $unset: { marketplaceBusinessId: 1 } });
+  return res.json({ success: true, message: "Business and its products were permanently deleted." });
 });
 
 router.get("/media-upload-mode", protect, (req, res) => {

@@ -86,6 +86,20 @@ accountType: {
       min: 0,
     },
 
+    squadVirtualAccount: {
+      virtualAccountNumber: { type: String, trim: true },
+      bankCode: { type: String, trim: true },
+      bankName: { type: String, trim: true },
+      accountName: { type: String, trim: true },
+      customerIdentifier: { type: String, trim: true },
+      createdAt: { type: Date },
+    },
+    marketplaceBusinessId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MarketplaceSeller",
+      default: null,
+    },
+
     isVerified: {
       type: Boolean,
       default: false,
