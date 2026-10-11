@@ -6,6 +6,7 @@ const User = require("../models/User");
 const Transaction = require("../models/Transaction");
 
 const initializePayment = async (req, res) => {
+  let transaction;
   try {
     const { amount } = req.body;
     const numericAmount = Number(amount);
@@ -25,21 +26,37 @@ const initializePayment = async (req, res) => {
     }
 
     const finalAmount = Math.round(numericAmount * 100);
-const forwardedProto = req.get("x-forwarded-proto");
-const forwardedHost = req.get("x-forwarded-host");
-
-const protocol = (forwardedProto || req.protocol).split(",")[0].trim();
-const host = (forwardedHost || req.get("host")).split(",")[0].trim();
-
-const appUrl = process.env.APP_URL || `${protocol}://${host}`;
-const callbackUrl = `${appUrl}/?payment=callback`;
+    const amountInNaira = finalAmount / 100;
+    const reference = `mamu-${Date.now()}-${crypto.randomBytes(8).toString("hex")}`;
+    transaction = new Transaction({
+      user: req.user._id,
+      type: "wallet_funding",
+      amount: amountInNaira,
+      status: "pending",
+      reference,
+      description: "Wallet funding via Paystack",
+      metadata: {
+        paystackReference: reference,
+        paymentFlow: "hosted_checkout",
+      },
+    });
+    await transaction.save();
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email: req.user.email,
-amount: finalAmount,
-callback_url: callbackUrl,
+        amount: finalAmount,
+        currency: "NGN",
+        reference,
+        callback_url: (() => {
+          const forwardedProto = req.get("x-forwarded-proto");
+          const forwardedHost = req.get("x-forwarded-host");
+          const protocol = (forwardedProto || req.protocol).split(",")[0].trim();
+          const host = (forwardedHost || req.get("host")).split(",")[0].trim();
+          const appUrl = process.env.APP_URL || `${protocol}://${host}`;
+          return `${appUrl}/?payment=callback`;
+        })(),
       },
       {
         headers: {
@@ -49,35 +66,31 @@ callback_url: callbackUrl,
       }
     );
 
-    const paymentData = response.data.data;
-
-    if (!paymentData || !paymentData.reference) {
-      return res.status(500).json({
+    const paymentData = response.data?.data;
+    if (!paymentData?.authorization_url || paymentData.reference !== reference) {
+      transaction.status = "failed";
+      transaction.metadata = {
+        ...transaction.metadata,
+        initializationError: "Paystack did not return a valid checkout URL",
+      };
+      await transaction.save();
+      return res.status(502).json({
         success: false,
-        message: "Paystack did not return a valid payment reference",
+        message: "Paystack did not return a valid checkout URL. Please try again.",
       });
     }
 
-    const transaction = new Transaction({
-      user: req.user._id,
-      type: "wallet_funding",
-      amount: numericAmount,
-      status: "pending",
-      reference: paymentData.reference,
-      description: "Wallet funding via Paystack",
-      metadata: {
-        paystackReference: paymentData.reference,
-        authorizationUrl: paymentData.authorization_url,
-      },
-    });
-
+    transaction.metadata = {
+      ...transaction.metadata,
+      authorizationUrl: paymentData.authorization_url,
+    };
     await transaction.save();
 
     return res.status(200).json({
       success: true,
-      message: "Payment initialized successfully",
+      message: "Paystack Pay with Bank is ready",
+      reference,
       authorizationUrl: paymentData.authorization_url,
-      reference: paymentData.reference,
       transactionId: transaction._id,
       transactionStatus: transaction.status,
     });
@@ -87,15 +100,150 @@ callback_url: callbackUrl,
       error.response?.data || error.message
     );
 
-    return res.status(500).json({
+    if (transaction && transaction.status === "pending") {
+      transaction.metadata = {
+        ...transaction.metadata,
+        initializationError: "Paystack checkout initialization failed",
+      };
+      await transaction.save().catch(() => {});
+    }
+    return res.status(502).json({
       success: false,
-      message: "Unable to initialize payment",
+      message: error.response?.data?.message || "Unable to start Paystack checkout. Please try again.",
     });
   }
 };
 
+const initializeBankTransfer = async (req, res) => {
+  let transaction;
+  try {
+    const numericAmount = Number(req.body.amount);
+    if (!req.user.email) {
+      return res.status(400).json({ success: false, message: "Please add your email before funding your wallet." });
+    }
+    if (!Number.isFinite(numericAmount) || numericAmount < 100) {
+      return res.status(400).json({ success: false, message: "Minimum funding amount is ₦100." });
+    }
+
+    const amountInKobo = Math.round(numericAmount * 100);
+    const amountInNaira = amountInKobo / 100;
+    const reference = `mamu-${Date.now()}-${crypto.randomBytes(8).toString("hex")}`;
+    const requestedExpiry = new Date(Date.now() + 20 * 60 * 1000).toISOString();
+    transaction = new Transaction({
+      user: req.user._id,
+      type: "wallet_funding",
+      amount: amountInNaira,
+      status: "pending",
+      reference,
+      description: "Wallet funding via Paystack bank transfer",
+      metadata: {
+        paystackReference: reference,
+        paymentFlow: "bank_transfer_charge",
+        requestedAccountExpiresAt: requestedExpiry,
+      },
+    });
+    await transaction.save();
+
+    const response = await axios.post(
+      "https://api.paystack.co/charge",
+      {
+        email: req.user.email,
+        amount: amountInKobo,
+        currency: "NGN",
+        reference,
+        bank_transfer: { account_expires_at: requestedExpiry },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const payment = response.data?.data;
+    const accountNumber = payment?.account_number;
+    const bankName = payment?.bank?.name || payment?.bank_name;
+    const accountName = payment?.account_name || "";
+    const accountExpiresAt = payment?.account_expires_at || null;
+    if (
+      !payment ||
+      payment.reference !== reference ||
+      payment.status !== "pending_bank_transfer" ||
+      !accountNumber ||
+      !bankName ||
+      (accountExpiresAt && !Number.isFinite(Date.parse(accountExpiresAt)))
+    ) {
+      transaction.status = "failed";
+      transaction.metadata = {
+        ...transaction.metadata,
+        initializationError: "Paystack did not return a valid bank transfer account",
+      };
+      await transaction.save();
+      return res.status(502).json({
+        success: false,
+        message: "Paystack did not return valid transfer account details. Please try again later.",
+      });
+    }
+
+    transaction.metadata = {
+      ...transaction.metadata,
+      accountNumber: String(accountNumber),
+      accountName,
+      bankName,
+      accountExpiresAt,
+    };
+    await transaction.save();
+
+    return res.status(200).json({
+      success: true,
+      reference,
+      transfer: {
+        bankName,
+        accountName,
+        accountNumber: String(accountNumber),
+        amount: amountInNaira,
+        accountExpiresAt,
+      },
+      paymentStatus: payment.status,
+    });
+  } catch (error) {
+    console.error("Paystack bank transfer initialization error:", error.response?.data || error.message);
+    if (transaction && transaction.status === "pending") {
+      transaction.metadata = {
+        ...transaction.metadata,
+        initializationError: "Paystack bank transfer initialization failed",
+      };
+      await transaction.save().catch(() => {});
+    }
+    return res.status(502).json({
+      success: false,
+      message: error.response?.data?.message || "Unable to generate a Paystack transfer account. Please try again.",
+    });
+  }
+};
+
+const fetchPaystackPayment = async (transaction) => {
+  const isBankTransfer = transaction.metadata?.paymentFlow === "bank_transfer_charge";
+  const endpoint = isBankTransfer
+    ? `https://api.paystack.co/charge/${encodeURIComponent(transaction.reference)}`
+    : `https://api.paystack.co/transaction/verify/${encodeURIComponent(transaction.reference)}`;
+  const response = await axios.get(endpoint, {
+    headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+  });
+  const payment = response.data?.data;
+  if (!payment || payment.reference !== transaction.reference) {
+    throw new Error("Paystack verification returned an invalid reference");
+  }
+  return payment;
+};
+
 
 const processSuccessfulPayment = async (payment) => {
+  if (!payment || payment.status !== "success" || !payment.reference || !Number.isFinite(Number(payment.amount))) {
+    throw new Error("Paystack payment is not verified as successful");
+  }
+
   const session = await mongoose.startSession();
 
   try {
@@ -108,6 +256,14 @@ const processSuccessfulPayment = async (payment) => {
 
       if (!transaction) {
         throw new Error("Payment transaction not found");
+      }
+
+      const paymentFlow = transaction.metadata?.paymentFlow;
+      if (
+        (paymentFlow === "bank_transfer_charge" && payment.channel !== "bank_transfer") ||
+        (paymentFlow === "bank_transfer_charge" && payment.currency !== "NGN")
+      ) {
+        throw new Error("Paystack payment channel does not match the pending transaction");
       }
 
       // Prevent double wallet credit
@@ -189,19 +345,8 @@ const verifyPayment = async (req, res) => {
       });
     }
 
-    const response = await axios.get(
-      `https://api.paystack.co/transaction/verify/${reference}`,
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-        },
-      }
-    );
-
-    const payment = response.data.data;
-
     const transaction = await Transaction.findOne({
-      reference: payment.reference,
+      reference,
       user: req.user._id,
     });
 
@@ -211,6 +356,8 @@ const verifyPayment = async (req, res) => {
         message: "Payment transaction not found",
       });
     }
+
+    const payment = await fetchPaystackPayment(transaction);
 
     if (payment.status !== "success") {
   const failedStatuses = [
@@ -241,8 +388,9 @@ const verifyPayment = async (req, res) => {
     });
   }
 
-  return res.status(202).json({
-    success: false,
+  return res.status(200).json({
+    success: true,
+    pending: true,
     message: "Payment is still being processed",
     paymentStatus: payment.status,
   });
@@ -323,50 +471,28 @@ if (
 
     console.log("Paystack webhook event:", event.event);
 
-    if (event.event === "charge.success") {
-      const payment = event.data;
+    if (["charge.success", "charge.failed", "bank.transfer.rejected"].includes(event.event)) {
+      const reference = event.data?.reference;
+      const transaction = reference
+        ? await Transaction.findOne({ reference })
+        : null;
 
-      const transaction = await Transaction.findOne({
-        reference: payment.reference,
-      });
+      if (!transaction) return res.sendStatus(200);
 
-      if (!transaction) {
-        console.log(
-          "Webhook transaction not found:",
-          payment.reference
-        );
-
-        return res.sendStatus(200);
-      }
-
-      if (transaction.status === "successful") {
-        return res.sendStatus(200);
-      }
-
-      await processSuccessfulPayment(payment);
-
-      console.log(
-        "Webhook payment processed:",
-        payment.reference
-      );
-    }
-
-    if (event.event === "charge.failed") {
-      const payment = event.data;
-
-      const transaction = await Transaction.findOne({
-        reference: payment.reference,
-      });
-
-      if (transaction && transaction.status === "pending") {
+      // Treat the webhook as a notification only; fetch the canonical status from Paystack.
+      const payment = await fetchPaystackPayment(transaction);
+      if (payment.status === "success") {
+        await processSuccessfulPayment(payment);
+      } else if (
+        ["charge.failed", "bank.transfer.rejected"].includes(event.event) &&
+        transaction.status === "pending"
+      ) {
         transaction.status = "failed";
-
         transaction.metadata = {
           ...transaction.metadata,
           paystackStatus: payment.status,
           webhookFailedAt: new Date(),
         };
-
         await transaction.save();
       }
     }
@@ -381,6 +507,7 @@ if (
 
 module.exports = {
   initializePayment,
+  initializeBankTransfer,
   verifyPayment,
   paystackWebhook,
 };
