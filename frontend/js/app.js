@@ -1598,11 +1598,18 @@ function setupGenerateAccountNumber() {
   const modal = $("paystackTransferModal");
   let activeReference = null;
   let pollingReference = null;
+  let checkingReference = null;
 
   if (!button || !modal) return;
 
-  const closeModal = () => modal.classList.remove("active");
-  $("closePaystackTransferModal")?.addEventListener("click", closeModal);
+  const closeModal = () => {
+    modal.classList.remove("active");
+    if (activeReference) {
+      const status = $("generateAccountStatus");
+      if (status) status.textContent = "Payment popup closed. Paystack status checks will continue until the transfer is confirmed.";
+    }
+  };
+  $("cancelPaystackTransferPayment")?.addEventListener("click", closeModal);
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeModal();
   });
@@ -1618,35 +1625,64 @@ function setupGenerateAccountNumber() {
     }
   });
 
+  const verifyTransferStatus = async (reference, manual = false) => {
+    if (activeReference !== reference) return;
+    if (checkingReference === reference) {
+      if (manual) $("paystackTransferStatus").textContent = "Payment status: Already checking with Paystack…";
+      return;
+    }
+
+    checkingReference = reference;
+    const checkButton = $("paystackTransferSentBtn");
+    if (manual && checkButton) {
+      checkButton.disabled = true;
+      checkButton.textContent = "Checking with Paystack…";
+    }
+
+    try {
+      const result = await apiRequest(`/payment/verify/${encodeURIComponent(reference)}`);
+      if (activeReference !== reference) return;
+      if (result.success && !result.pending) {
+        $("paystackTransferStatus").textContent = "Payment status: Successful. Your wallet has been credited.";
+        await Promise.all([loadWallet(), loadProfile(), loadTransactions()]);
+        showToast("Paystack transfer confirmed and wallet funded.", "success");
+        activeReference = null;
+        return;
+      }
+      $("paystackTransferStatus").textContent = `Payment status: ${result.paymentStatus === "pending_bank_transfer" ? "Waiting for Paystack confirmation" : result.paymentStatus || "Waiting for transfer"}.`;
+      if (manual) showToast("Paystack has not confirmed the transfer yet.", "success");
+    } catch (error) {
+      if (error.message === "Unauthorized") {
+        activeReference = null;
+        return;
+      }
+      if (error.message === "Payment failed") {
+        $("paystackTransferStatus").textContent = "Payment status: Failed or expired. Generate a new transfer account to try again.";
+        activeReference = null;
+        return;
+      }
+      $("paystackTransferStatus").textContent = "Payment status: Waiting for transfer confirmation. Checking again…";
+      if (manual) showToast("Could not check Paystack yet. The app will try again automatically.", "error");
+    } finally {
+      if (checkingReference === reference) checkingReference = null;
+      if (manual && checkButton) {
+        checkButton.disabled = activeReference !== reference;
+        checkButton.textContent = "I've sent the money";
+      }
+    }
+  };
+
+  $("paystackTransferSentBtn")?.addEventListener("click", () => {
+    if (activeReference) verifyTransferStatus(activeReference, true);
+  });
+
   const pollPayment = async (reference) => {
     if (pollingReference === reference) return;
     pollingReference = reference;
     while (activeReference === reference) {
       await new Promise((resolve) => setTimeout(resolve, 10000));
       if (activeReference !== reference) break;
-      try {
-        const result = await apiRequest(`/payment/verify/${encodeURIComponent(reference)}`);
-        if (activeReference !== reference) break;
-        if (result.success && !result.pending) {
-          $("paystackTransferStatus").textContent = "Payment status: Successful. Your wallet has been credited.";
-          await Promise.all([loadWallet(), loadProfile(), loadTransactions()]);
-          showToast("Paystack transfer confirmed and wallet funded.", "success");
-          activeReference = null;
-          break;
-        }
-        $("paystackTransferStatus").textContent = `Payment status: ${result.paymentStatus || "Waiting for transfer"}.`;
-      } catch (error) {
-        if (error.message === "Unauthorized") {
-          activeReference = null;
-          break;
-        }
-        if (error.message === "Payment failed") {
-          $("paystackTransferStatus").textContent = "Payment status: Failed or expired. Generate a new transfer account to try again.";
-          activeReference = null;
-          break;
-        }
-        $("paystackTransferStatus").textContent = "Payment status: Waiting for transfer confirmation. Checking again…";
-      }
+      await verifyTransferStatus(reference);
     }
     if (pollingReference === reference) pollingReference = null;
   };

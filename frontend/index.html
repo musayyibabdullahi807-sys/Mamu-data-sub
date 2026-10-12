@@ -937,7 +937,9 @@
     <div class="manual-bank-row"><span>Expires</span><strong id="paystackTransferExpiry">—</strong></div>
     <button id="copyPaystackTransferAccount" class="secondary-btn full-btn" type="button">Copy account number</button>
     <p id="paystackTransferStatus" class="manual-funding-note" aria-live="polite">Payment status: Waiting for transfer</p>
-    <button id="closePaystackTransferModal" class="primary-btn full-btn" type="button">Close</button>
+    <button id="paystackTransferSentBtn" class="primary-btn full-btn" type="button">I've sent the money</button>
+    <button id="cancelPaystackTransferPayment" class="secondary-btn full-btn" type="button">Cancel payment</button>
+    <p class="manual-funding-note">Cancel closes this popup. The Paystack transfer account stays active until it expires, and status checks continue.</p>
   </div>
 </div>
 
@@ -1485,7 +1487,7 @@
   </section>
 </div>
 
-<script src="./js/app.js?v=paystack-dashboard-transfer-1"></script>
+<script src="./js/app.js?v=paystack-dashboard-transfer-2"></script>
 <script src="./js/marketplace-product-detail.js?v=hide-nav-1"></script>
 <script src="./js/marketplace-blob-client.bundle.js?v=vercel-blob-1"></script>
 <script src="./js/marketplace.js?v=business-admin-controls-2"></script>
