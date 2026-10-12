@@ -86,6 +86,12 @@ accountType: {
       min: 0,
     },
 
+    dataProvider: {
+      type: String,
+      enum: ["gsubz", "cheapdatahub"],
+      default: "gsubz",
+    },
+
     squadVirtualAccount: {
       virtualAccountNumber: { type: String, trim: true },
       bankCode: { type: String, trim: true },

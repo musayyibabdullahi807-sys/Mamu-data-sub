@@ -575,7 +575,7 @@ async function loadDataPlans() {
     const data = await apiRequest("/data/plans");
 
     allDataPlans = Array.isArray(data.plans)
-      ? data.plans
+      ? uniqueDataPlans(data.plans)
       : [];
 
     renderPopularPlans();
@@ -603,6 +603,23 @@ function networkName(plan) {
     plan.network_name ||
     String(plan.network || "")
   );
+}
+
+function uniqueDataPlans(plans) {
+  const seen = new Set();
+  return plans.filter((plan) => {
+    const normalize = (value) => String(value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
+    const price = Number(plan.sellingPrice);
+    const key = [
+      normalize(networkName(plan)),
+      normalize(plan.plan || "Data Plan"),
+      normalize(plan.validity || "Data"),
+      Number.isFinite(price) ? price.toFixed(2) : normalize(plan.sellingPrice),
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function renderPopularPlans() {
@@ -982,7 +999,19 @@ function setupDataPurchase() {
     }
 
     const selectedPlan = allDataPlans.find((plan) => String(plan._id) === String(planId));
-    pendingPurchase = { phone, planId, selectedPlan };
+    const idempotencyStorageKey = `mds_data_purchase_${planId}_${phone}`;
+    let idempotencyKey = sessionStorage.getItem(idempotencyStorageKey);
+    if (!idempotencyKey) {
+      idempotencyKey = window.crypto?.randomUUID?.() || `mds-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem(idempotencyStorageKey, idempotencyKey);
+    }
+    pendingPurchase = {
+      phone,
+      planId,
+      selectedPlan,
+      idempotencyKey,
+      idempotencyStorageKey,
+    };
     const planName = selectedPlan?.plan || "Data Plan";
     const amount = selectedPlan ? money(Number(selectedPlan.sellingPrice || 0)) : "—";
     $("dataPurchasePinDetails").textContent = `${planName} · ${phone} · ${amount}. Enter your transaction PIN to continue.`;
@@ -1048,13 +1077,17 @@ function setupDataPurchase() {
       return;
     }
 
-    const { phone, planId, selectedPlan } = pendingPurchase;
+    const { phone, planId, selectedPlan, idempotencyKey, idempotencyStorageKey } = pendingPurchase;
     setButtonLoading(confirmButton, true, "Processing...");
     try {
       const data = await apiRequest("/data/purchase", {
         method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({ planId, phone, pin }),
       });
+      if (data.status === "successful" || data.status === "failed") {
+        sessionStorage.removeItem(idempotencyStorageKey);
+      }
       modal.classList.remove("active");
       pendingPurchase = null;
       showPurchaseReceipt({
@@ -1073,6 +1106,14 @@ function setupDataPurchase() {
       await refreshHome();
       await loadDataPlans();
     } catch (error) {
+      if (error.status === "failed") {
+        sessionStorage.removeItem(idempotencyStorageKey);
+      }
+      if (!error.status && pendingPurchase?.idempotencyKey === idempotencyKey) {
+        pinMessage.textContent = "Ba a tabbatar da amsar server ba. Ka sake danna Confirm purchase; ba za a tura sayen sau biyu ba.";
+        pinMessage.className = "pin-prompt-message error";
+        return;
+      }
       modal.classList.remove("active");
       pendingPurchase = null;
       showPurchaseReceipt({
