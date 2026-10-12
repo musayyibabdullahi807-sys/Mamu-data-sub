@@ -5,7 +5,6 @@ const Order = require("../models/Order");
 const Transaction = require("../models/Transaction");
 const ReferralCommission = require("../models/ReferralCommission");
 const { buyData } = require("../services/gsubzService");
-const cheapDataHub = require("../services/cheapdatahubService");
 const crypto = require("crypto");
 
 const generateReference = () => {
@@ -16,14 +15,6 @@ const generateReference = () => {
 const getDataPlans = async (req, res) => {
   try {
     const { network } = req.query;
-
-    if (req.user?.dataProvider === "cheapdatahub") {
-      const plans = await cheapDataHub.getDataPlans();
-      const filteredPlans = network
-        ? plans.filter((plan) => plan.networkName === String(network).toUpperCase())
-        : plans;
-      return res.json({ success: true, count: filteredPlans.length, plans: filteredPlans });
-    }
 
     const filter = {
       isActive: true,
@@ -54,194 +45,6 @@ const getDataPlans = async (req, res) => {
       success: false,
       message: "Server error while getting data plans",
     });
-  }
-};
-
-const purchaseCheapData = async ({ req, res, user, phone, planId }) => {
-  let order = null;
-  let transaction = null;
-  let walletDeducted = false;
-
-  try {
-    if (!process.env.CHEAPDATAHUB_API_KEY) {
-      return res.status(503).json({
-        success: false,
-        message: "CheapDataHub API key is not configured on the server",
-      });
-    }
-
-    const idempotencyKey = String(req.get("Idempotency-Key") || "").trim();
-    if (!/^[A-Za-z0-9._:-]{12,100}$/.test(idempotencyKey)) {
-      return res.status(400).json({
-        success: false,
-        message: "A valid Idempotency-Key is required for this provider",
-      });
-    }
-
-    const plans = await cheapDataHub.getDataPlans();
-    const plan = plans.find((item) => item._id === String(planId));
-    if (!plan) {
-      return res.status(404).json({ success: false, message: "CheapDataHub data plan not found" });
-    }
-
-    const requestHash = crypto.createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 24);
-    const reference = `CDH-${String(user._id)}-${requestHash}`;
-    const existing = await Transaction.findOne({ user: user._id, reference });
-    if (existing) {
-      if (existing.metadata?.phone !== phone || String(existing.metadata?.providerPlanId) !== plan.providerPlanId) {
-        return res.status(409).json({ success: false, message: "This idempotency key was already used for a different purchase" });
-      }
-      return res.status(existing.status === "pending" ? 202 : 200).json({
-        success: existing.status !== "failed",
-        message: existing.status === "pending"
-          ? "This purchase is awaiting provider confirmation; it was not sent again"
-          : existing.status === "successful" ? "Data purchase successful" : "This purchase request has already failed",
-        reference,
-        providerReference: existing.metadata?.providerReference || null,
-        status: existing.status,
-        walletBalance: user.walletBalance,
-      });
-    }
-
-    if (user.walletBalance < plan.sellingPrice) {
-      return res.status(400).json({
-        success: false,
-        message: "Insufficient wallet balance",
-        walletBalance: user.walletBalance,
-        requiredAmount: plan.sellingPrice,
-      });
-    }
-
-    transaction = await Transaction.create({
-      user: user._id,
-      type: "data_purchase",
-      amount: plan.sellingPrice,
-      status: "pending",
-      reference,
-      description: `Data purchase - ${plan.networkName} ${plan.plan}`,
-      metadata: {
-        provider: "cheapdatahub",
-        providerPlanId: plan.providerPlanId,
-        phone,
-        idempotencyKeyHash: requestHash,
-      },
-    });
-
-    order = await Order.create({
-      user: user._id,
-      serviceType: "data",
-      network: plan.networkName,
-      phone,
-      plan: plan.providerPlanId,
-      amount: plan.sellingPrice,
-      reference,
-      status: "pending",
-    });
-    transaction.metadata = { ...transaction.metadata, orderId: order._id };
-    await transaction.save();
-
-    const updatedUser = await User.findOneAndUpdate(
-      { _id: user._id, accountStatus: "active", walletBalance: { $gte: plan.sellingPrice } },
-      { $inc: { walletBalance: -plan.sellingPrice } },
-      { new: true }
-    );
-    if (!updatedUser) {
-      order.status = "failed";
-      transaction.status = "failed";
-      await Promise.all([order.save(), transaction.save()]);
-      return res.status(400).json({ success: false, message: "Insufficient wallet balance" });
-    }
-    walletDeducted = true;
-
-    let providerResponse;
-    try {
-      providerResponse = await cheapDataHub.buyData({ bundleId: plan.providerPlanId, phone });
-    } catch (providerError) {
-      const providerStatusCode = Number(providerError.response?.status || 0);
-      const definiteRejection = providerStatusCode >= 400 && providerStatusCode < 500 && providerStatusCode !== 409;
-      if (definiteRejection) {
-        const refundedUser = await refundWallet(user._id, plan.sellingPrice);
-        walletDeducted = false;
-        order.status = "failed";
-        order.providerResponse = { httpStatus: providerStatusCode };
-        transaction.status = "failed";
-        transaction.metadata = { ...transaction.metadata, providerHttpStatus: providerStatusCode };
-        await Promise.all([order.save(), transaction.save()]);
-        return res.status(400).json({
-          success: false,
-          message: "CheapDataHub rejected the purchase; wallet funds were restored",
-          reference,
-          status: "failed",
-          refunded: true,
-          walletBalance: refundedUser?.walletBalance ?? 0,
-        });
-      }
-
-      // A timeout, duplicate response, or server error may have completed upstream.
-      // Keep the wallet hold and do not send this idempotency key again.
-      order.providerResponse = { pending: true, httpStatus: providerStatusCode || null };
-      transaction.metadata = { ...transaction.metadata, providerPending: true, providerHttpStatus: providerStatusCode || null };
-      await Promise.all([order.save(), transaction.save()]);
-      return res.status(202).json({
-        success: true,
-        message: "Purchase status is pending provider confirmation; it will not be submitted again automatically",
-        reference,
-        status: "pending",
-        walletBalance: updatedUser.walletBalance,
-      });
-    }
-
-    const status = String(providerResponse?.status || "").toLowerCase();
-    const providerReference = providerResponse?.reference == null ? null : String(providerResponse.reference);
-    const responseMessage = String(providerResponse?.message || "").slice(0, 240);
-
-    if (status === "true") {
-      order.status = "successful";
-      order.providerReference = providerReference || undefined;
-      order.providerResponse = { status, message: responseMessage };
-      transaction.status = "successful";
-      transaction.metadata = { ...transaction.metadata, providerReference, providerStatus: status };
-      await Promise.all([order.save(), transaction.save()]);
-      const finalUser = await User.findById(user._id).select("walletBalance");
-      return res.status(200).json({
-        success: true,
-        message: "Data purchase successful",
-        reference,
-        providerReference,
-        status: "successful",
-        walletBalance: finalUser?.walletBalance ?? updatedUser.walletBalance,
-      });
-    }
-
-    // Unrecognized provider payloads are ambiguous; keep the debit pending.
-    order.providerResponse = { status: status || null, message: responseMessage };
-    transaction.metadata = { ...transaction.metadata, providerStatus: status || null, providerPending: true };
-    await Promise.all([order.save(), transaction.save()]);
-    return res.status(202).json({
-      success: true,
-      message: "Purchase status is pending provider confirmation",
-      reference,
-      providerReference,
-      status: "pending",
-      walletBalance: updatedUser.walletBalance,
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      const referenceMatch = String(error.keyValue?.reference || "");
-      const duplicate = referenceMatch ? await Transaction.findOne({ reference: referenceMatch, user: user._id }) : null;
-      if (duplicate) {
-        return res.status(202).json({ success: true, message: "This purchase is already being processed", reference: duplicate.reference, status: duplicate.status, walletBalance: user.walletBalance });
-      }
-    }
-
-    console.error("CheapDataHub data purchase error:", error.message);
-    if (walletDeducted && order && transaction) {
-      // Unexpected local errors after the provider call are ambiguous; leave pending.
-      await Order.findByIdAndUpdate(order._id, { status: "pending" }).catch(() => {});
-      await Transaction.findByIdAndUpdate(transaction._id, { status: "pending" }).catch(() => {});
-      return res.status(202).json({ success: true, message: "Purchase status is pending; do not submit it again", reference: transaction.reference, status: "pending" });
-    }
-    return res.status(500).json({ success: false, message: "Could not prepare CheapDataHub purchase" });
   }
 };
 
@@ -488,10 +291,6 @@ const purchaseData = async (req, res) => {
         success: false,
         message: "Incorrect transaction PIN",
       });
-    }
-
-    if (user.dataProvider === "cheapdatahub") {
-      return purchaseCheapData({ req, res, user, phone: cleanPhone, planId });
     }
 
     // Find data plan

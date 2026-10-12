@@ -999,18 +999,10 @@ function setupDataPurchase() {
     }
 
     const selectedPlan = allDataPlans.find((plan) => String(plan._id) === String(planId));
-    const idempotencyStorageKey = `mds_data_purchase_${planId}_${phone}`;
-    let idempotencyKey = sessionStorage.getItem(idempotencyStorageKey);
-    if (!/^[A-Za-z0-9._:-]{12,100}$/.test(idempotencyKey || "")) {
-      idempotencyKey = window.crypto?.randomUUID?.() || `mds-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      sessionStorage.setItem(idempotencyStorageKey, idempotencyKey);
-    }
     pendingPurchase = {
       phone,
       planId,
       selectedPlan,
-      idempotencyKey,
-      idempotencyStorageKey,
     };
     const planName = selectedPlan?.plan || "Data Plan";
     const amount = selectedPlan ? money(Number(selectedPlan.sellingPrice || 0)) : "—";
@@ -1077,17 +1069,13 @@ function setupDataPurchase() {
       return;
     }
 
-    const { phone, planId, selectedPlan, idempotencyKey, idempotencyStorageKey } = pendingPurchase;
+    const { phone, planId, selectedPlan } = pendingPurchase;
     setButtonLoading(confirmButton, true, "Processing...");
     try {
       const data = await apiRequest("/data/purchase", {
         method: "POST",
-        headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify({ planId, phone, pin }),
       });
-      if (data.status === "successful" || data.status === "failed") {
-        sessionStorage.removeItem(idempotencyStorageKey);
-      }
       modal.classList.remove("active");
       pendingPurchase = null;
       showPurchaseReceipt({
@@ -1106,14 +1094,6 @@ function setupDataPurchase() {
       await refreshHome();
       await loadDataPlans();
     } catch (error) {
-      if (error.status === "failed") {
-        sessionStorage.removeItem(idempotencyStorageKey);
-      }
-      if (!error.status && pendingPurchase?.idempotencyKey === idempotencyKey) {
-        pinMessage.textContent = "Ba a tabbatar da amsar server ba. Ka sake danna Confirm purchase; ba za a tura sayen sau biyu ba.";
-        pinMessage.className = "pin-prompt-message error";
-        return;
-      }
       modal.classList.remove("active");
       pendingPurchase = null;
       showPurchaseReceipt({
