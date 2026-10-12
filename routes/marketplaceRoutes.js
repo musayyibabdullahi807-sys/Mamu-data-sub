@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const fs = require("fs/promises");
 const path = require("path");
 const crypto = require("crypto");
+const { put: putBlob } = require("@vercel/blob");
 const { handleUpload } = require("@vercel/blob/client");
 const { del: deleteBlob } = require("@vercel/blob");
 const protect = require("../middleware/authMiddleware");
@@ -242,6 +243,15 @@ router.post("/product-images", protect, express.raw({ type: ["image/jpeg", "imag
     else return res.status(400).json({ success: false, message: "The selected file is not a supported photo or video" });
     if (kind === "image" && media.length > 5 * 1024 * 1024) return res.status(413).json({ success: false, message: "Each photo must be 5 MB or smaller" });
     const filename = `${crypto.randomUUID()}.${extension}`;
+    if (process.env.BLOB_READ_WRITE_TOKEN) {
+      if (kind === "image" && media.length > 4 * 1024 * 1024) return res.status(413).json({ success: false, message: "The photo is still too large after compression. Choose a smaller photo." });
+      const blob = await putBlob(`marketplace/${seller._id}/${filename}`, media, {
+        access: "public",
+        addRandomSuffix: true,
+        contentType,
+      });
+      return res.status(201).json({ success: true, mediaUrl: blob.url, kind });
+    }
     const directory = path.join(__dirname, "..", "frontend", "uploads", "marketplace");
     await fs.mkdir(directory, { recursive: true });
     await fs.writeFile(path.join(directory, filename), media, { flag: "wx" });

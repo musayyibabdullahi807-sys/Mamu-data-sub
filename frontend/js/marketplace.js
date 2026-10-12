@@ -9,6 +9,43 @@
   const money = (kobo) => new Intl.NumberFormat("en-NG", { style:"currency", currency:"NGN", maximumFractionDigits:2 }).format(kobo / 100);
   const authHeaders = (json = false) => ({ ...(json ? { "Content-Type":"application/json" } : {}), ...(token() ? { Authorization:`Bearer ${token()}` } : {}) });
 
+  const prepareMarketplacePhoto = async (file) => {
+    if (file.size <= 4 * 1024 * 1024) return file;
+    if (typeof createImageBitmap !== "function") throw new Error("This photo is too large for upload. Choose a smaller photo.");
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    for (const quality of [0.86, 0.76, 0.66, 0.56]) {
+      const compressed = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+      if (compressed && compressed.size <= 4 * 1024 * 1024) return compressed;
+    }
+    throw new Error("This photo is too large to upload. Choose a smaller photo.");
+  };
+
+  const uploadMarketplacePhoto = (file, onProgress) => new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", "/api/marketplace/product-images");
+    request.setRequestHeader("Content-Type", file.type);
+    if (token()) request.setRequestHeader("Authorization", `Bearer ${token()}`);
+    request.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable && onProgress) onProgress(Math.round((event.loaded / event.total) * 100));
+    });
+    request.addEventListener("load", () => {
+      let data;
+      try { data = JSON.parse(request.responseText); } catch (_) { return reject(new Error("The server returned an invalid upload response.")); }
+      if (request.status < 200 || request.status >= 300 || !data.success) return reject(new Error(data.message || "Could not upload product photo."));
+      resolve(data.mediaUrl);
+    });
+    request.addEventListener("error", () => reject(new Error("Network error while uploading the photo. Check your connection and retry.")));
+    request.addEventListener("timeout", () => reject(new Error("Photo upload timed out. Check your connection and retry.")));
+    request.timeout = 120000;
+    request.send(file);
+  });
+
   async function refreshMarketplace() {
     document.getElementById("marketSearchSection").hidden = false;
     productsNode.hidden = false;
@@ -219,8 +256,14 @@
           status.textContent = kind === "video" ? "Uploading video..." : `Uploading photo ${index + 1}/${selectedProductImages.length}...`;
           let mediaUrl;
           if (storage === "vercel-blob") {
-            if (typeof window.uploadMarketplaceBlob !== "function") throw new Error("Vercel upload support did not load. Refresh and try again.");
-            mediaUrl = await window.uploadMarketplaceBlob(mediaFile, values.sellerId, (percentage) => { status.textContent = `Uploading ${kind}... ${Math.round(percentage)}%`; });
+            if (kind === "photo") {
+              status.textContent = `Preparing photo ${index + 1}/${selectedProductImages.length}...`;
+              const preparedPhoto = await prepareMarketplacePhoto(mediaFile);
+              mediaUrl = await uploadMarketplacePhoto(preparedPhoto, (percentage) => { status.textContent = `Uploading photo ${index + 1}/${selectedProductImages.length}... ${percentage}%`; });
+            } else {
+              if (typeof window.uploadMarketplaceBlob !== "function") throw new Error("Vercel upload support did not load. Refresh and try again.");
+              mediaUrl = await window.uploadMarketplaceBlob(mediaFile, values.sellerId, (percentage) => { status.textContent = `Uploading ${kind}... ${Math.round(percentage)}%`; });
+            }
           } else {
             const uploadResponse = await fetch("/api/marketplace/product-images", { method:"POST", headers:{ ...authHeaders(), "Content-Type":mediaFile.type }, body:mediaFile });
             const uploadData = await uploadResponse.json();
