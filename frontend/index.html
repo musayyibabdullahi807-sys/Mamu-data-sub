@@ -824,20 +824,6 @@
   capture="user"
   hidden
 >
-<div id="paystackTransferModal" class="modal-overlay">
-  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="paystackTransferTitle">
-    <h2 id="paystackTransferTitle">Transfer to this account</h2>
-    <p>Send the exact amount shown below. Your wallet will be credited after Paystack confirms the payment.</p>
-    <div class="manual-bank-row"><span>Bank name</span><strong id="paystackTransferBank">—</strong></div>
-    <div class="manual-bank-row"><span>Account name</span><strong id="paystackTransferName">—</strong></div>
-    <div class="manual-bank-row"><span>Account number</span><strong id="paystackTransferAccount">—</strong></div>
-    <div class="manual-bank-row"><span>Amount to transfer</span><strong id="paystackTransferAmount">—</strong></div>
-    <div class="manual-bank-row"><span>Expires</span><strong id="paystackTransferExpiry">—</strong></div>
-    <button id="copyPaystackTransferAccount" class="secondary-btn full-btn" type="button">Copy account number</button>
-    <p id="paystackTransferStatus" class="manual-funding-note" aria-live="polite">Payment status: Waiting for transfer</p>
-    <button id="closePaystackTransferModal" class="primary-btn full-btn" type="button">Close</button>
-  </div>
-</div>
 <div id="photoChoiceModal" class="modal-overlay">
   <div class="modal-box">
     <h2>Profile Photo</h2>
@@ -939,6 +925,21 @@
 
     </main>
   </section>
+
+<div id="paystackTransferModal" class="modal-overlay">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="paystackTransferTitle">
+    <h2 id="paystackTransferTitle">Transfer to this account</h2>
+    <p>Send the exact amount shown below. Your wallet will be credited after Paystack confirms the payment.</p>
+    <div class="manual-bank-row"><span>Bank name</span><strong id="paystackTransferBank">—</strong></div>
+    <div class="manual-bank-row"><span>Account name</span><strong id="paystackTransferName">—</strong></div>
+    <div class="manual-bank-row"><span>Account number</span><strong id="paystackTransferAccount">—</strong></div>
+    <div class="manual-bank-row"><span>Amount to transfer</span><strong id="paystackTransferAmount">—</strong></div>
+    <div class="manual-bank-row"><span>Expires</span><strong id="paystackTransferExpiry">—</strong></div>
+    <button id="copyPaystackTransferAccount" class="secondary-btn full-btn" type="button">Copy account number</button>
+    <p id="paystackTransferStatus" class="manual-funding-note" aria-live="polite">Payment status: Waiting for transfer</p>
+    <button id="closePaystackTransferModal" class="primary-btn full-btn" type="button">Close</button>
+  </div>
+</div>
 
 <!-- SETTINGS PAGE -->
 <section class="page" id="settingsPage">
