@@ -238,6 +238,10 @@ const fetchPaystackPayment = async (transaction) => {
   return payment;
 };
 
+const isBankTransferCreditPending = (transaction, payment) =>
+  transaction.metadata?.paymentFlow === "bank_transfer_charge" &&
+  /transfer credit request pending/i.test(String(payment?.message || ""));
+
 
 const processSuccessfulPayment = async (payment) => {
   if (!payment || payment.status !== "success" || !payment.reference || !Number.isFinite(Number(payment.amount))) {
@@ -360,6 +364,25 @@ const verifyPayment = async (req, res) => {
     const payment = await fetchPaystackPayment(transaction);
 
     if (payment.status !== "success") {
+  if (isBankTransferCreditPending(transaction, payment)) {
+    // Paystack can report status "failed" while its bank transfer credit is
+    // still pending. Keep this transaction open so polling can detect success.
+    transaction.status = "pending";
+    transaction.metadata = {
+      ...transaction.metadata,
+      paystackStatus: payment.status,
+      paystackMessage: payment.message,
+    };
+    await transaction.save();
+
+    return res.status(200).json({
+      success: true,
+      pending: true,
+      message: "Paystack is still confirming the bank transfer",
+      paymentStatus: "pending_bank_transfer",
+    });
+  }
+
   const failedStatuses = [
     "failed",
     "abandoned",
@@ -483,6 +506,15 @@ if (
       const payment = await fetchPaystackPayment(transaction);
       if (payment.status === "success") {
         await processSuccessfulPayment(payment);
+      } else if (isBankTransferCreditPending(transaction, payment)) {
+        // The transfer is still being reconciled; do not close the payment.
+        transaction.status = "pending";
+        transaction.metadata = {
+          ...transaction.metadata,
+          paystackStatus: payment.status,
+          paystackMessage: payment.message,
+        };
+        await transaction.save();
       } else if (
         ["charge.failed", "bank.transfer.rejected"].includes(event.event) &&
         transaction.status === "pending"
