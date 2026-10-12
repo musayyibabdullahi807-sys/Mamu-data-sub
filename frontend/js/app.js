@@ -1001,7 +1001,7 @@ function setupDataPurchase() {
     const selectedPlan = allDataPlans.find((plan) => String(plan._id) === String(planId));
     const idempotencyStorageKey = `mds_data_purchase_${planId}_${phone}`;
     let idempotencyKey = sessionStorage.getItem(idempotencyStorageKey);
-    if (!idempotencyKey) {
+    if (!/^[A-Za-z0-9._:-]{12,100}$/.test(idempotencyKey || "")) {
       idempotencyKey = window.crypto?.randomUUID?.() || `mds-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       sessionStorage.setItem(idempotencyStorageKey, idempotencyKey);
     }
