@@ -8,7 +8,6 @@ const TOKEN_KEY = "mamu_token";
 const THEME_KEY = "mamu_theme";
 const APP_LOCK_KEY = "mamu_app_locked_at";
 const APP_LOCK_STATE_KEY = "mamu_app_is_locked";
-const APP_LOCK_DELAY = 10 * 1000;
 
 function getAccountThemeKey(user = null) {
   try {
@@ -1876,7 +1875,6 @@ function setupAppLock() {
   window.addEventListener("mamu:passkey-changed", refreshBiometricStatus);
 
   let locked = document.documentElement.dataset.appLockRequired === "true" && Boolean(getToken());
-  let lockTimer;
   let busy = false;
   const updateDots = () => dots?.querySelectorAll("i").forEach((dot, index) => dot.classList.toggle("filled", index < input.value.length));
   const setLocked = (value) => {
@@ -1893,25 +1891,20 @@ function setupAppLock() {
       message.className = "app-lock-message";
     } else {
       try { localStorage.removeItem(APP_LOCK_KEY); localStorage.removeItem(APP_LOCK_STATE_KEY); } catch (_) {}
-      scheduleLock();
     }
-  };
-  const scheduleLock = () => {
-    clearTimeout(lockTimer);
-    if (!getToken() || locked || !document.hidden) return;
-    let awayAt = Date.now();
-    try {
-      awayAt = Number(localStorage.getItem(APP_LOCK_KEY)) || Date.now();
-      localStorage.setItem(APP_LOCK_KEY, String(awayAt));
-    } catch (_) {}
-    lockTimer = setTimeout(() => {
-      if (document.hidden && getToken()) setLocked(true);
-    }, Math.max(0, APP_LOCK_DELAY - (Date.now() - awayAt)));
   };
   const markAway = () => {
     if (!getToken() || locked) return;
     try { localStorage.setItem(APP_LOCK_KEY, String(Date.now())); } catch (_) {}
-    scheduleLock();
+  };
+  const resumeApp = () => {
+    if (document.hidden || !getToken() || locked) return;
+    let shouldLock = false;
+    try {
+      shouldLock = localStorage.getItem(APP_LOCK_STATE_KEY) === "1";
+      if (!shouldLock) localStorage.removeItem(APP_LOCK_KEY);
+    } catch (_) {}
+    if (shouldLock) setLocked(true);
   };
 
   if (locked) setLocked(true);
@@ -1920,16 +1913,11 @@ function setupAppLock() {
       markAway();
       return;
     }
-    clearTimeout(lockTimer);
-    let shouldLock = false;
-    try {
-      const awayAt = Number(localStorage.getItem(APP_LOCK_KEY)) || 0;
-      shouldLock = localStorage.getItem(APP_LOCK_STATE_KEY) === "1" || (awayAt > 0 && Date.now() - awayAt >= APP_LOCK_DELAY);
-      if (!shouldLock) localStorage.removeItem(APP_LOCK_KEY);
-    } catch (_) {}
-    if (shouldLock && getToken()) setLocked(true);
+    resumeApp();
   });
   window.addEventListener("pagehide", markAway);
+  window.addEventListener("pageshow", resumeApp);
+  window.addEventListener("focus", resumeApp);
 
   screen.querySelectorAll("[data-lock-digit]").forEach((button) => {
     button.addEventListener("click", () => {
