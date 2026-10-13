@@ -997,15 +997,11 @@ function setupDataPurchase() {
   const pinInput = $("dataPurchasePinInput");
   const pinMessage = $("dataPurchasePinMessage");
   const confirmButton = $("confirmDataPurchasePin");
-  const loadingOverlay = $("dataPurchaseLoading");
   let pendingPurchase = null;
-  let promptTimer = null;
 
   if (!purchaseButton || !modal || !pinInput || !confirmButton) return;
 
   const openPinPrompt = () => {
-    clearTimeout(promptTimer);
-    loadingOverlay?.classList.remove("active");
     const phone = $("dataPhone")?.value.trim();
     const planId = $("dataPlan")?.value;
     if (!phone || !planId) {
@@ -1034,36 +1030,25 @@ function setupDataPurchase() {
     setTimeout(() => pinInput.focus(), 50);
   };
 
-  const queuePinPrompt = (showValidation = true) => {
-    clearTimeout(promptTimer);
-    if (!$("dataPlan")?.value) return;
-    const phone = $("dataPhone")?.value.trim();
-    if (!/^\d{10,15}$/.test(phone || "")) {
-      loadingOverlay?.classList.remove("active");
-      if (showValidation) showToast("Enter a valid phone number to continue.", "error");
-      $("dataPhone")?.focus();
-      return;
-    }
-    loadingOverlay?.classList.add("active");
-    promptTimer = setTimeout(openPinPrompt, 2000);
+  const queuePinPrompt = () => {
+    const phone = $("dataPhone")?.value.trim() || "";
+    const ready = /^\d{10,15}$/.test(phone) && Boolean($("dataPlan")?.value);
+    purchaseButton.hidden = false;
+    purchaseButton.disabled = !ready;
+    purchaseButton.textContent = "Proceed";
+    purchaseButton.classList.toggle("is-ready", ready);
   };
 
   window.queueDataPurchasePinPrompt = queuePinPrompt;
   window.cancelDataPurchasePrompt = () => {
-    clearTimeout(promptTimer);
-    loadingOverlay?.classList.remove("active");
     modal.classList.remove("active");
     pendingPurchase = null;
   };
   purchaseButton.addEventListener("click", openPinPrompt);
-  $("dataPhone")?.addEventListener("input", () => {
-    if ($("dataPlan")?.value) queuePinPrompt(false);
-  });
+  $("dataPhone")?.addEventListener("input", queuePinPrompt);
   $("dataPlan")?.addEventListener("change", queuePinPrompt);
 
   $("cancelDataPurchasePin")?.addEventListener("click", () => {
-    clearTimeout(promptTimer);
-    loadingOverlay?.classList.remove("active");
     modal.classList.remove("active");
     pinInput.value = "";
     pinMessage.textContent = "";
@@ -1071,8 +1056,6 @@ function setupDataPurchase() {
   });
   modal.addEventListener("click", (event) => {
     if (event.target === modal) {
-      clearTimeout(promptTimer);
-      loadingOverlay?.classList.remove("active");
       modal.classList.remove("active");
       pinInput.value = "";
       pendingPurchase = null;
@@ -1111,6 +1094,7 @@ function setupDataPurchase() {
       showToast(data.message || "Data purchase request submitted successfully.", "success");
       $("dataPhone").value = "";
       $("dataPlan").value = "";
+      queuePinPrompt();
       await refreshHome();
       await loadDataPlans();
     } catch (error) {
@@ -1134,28 +1118,29 @@ function setupDataPurchase() {
 }
 
 let pendingServicePurchaseAction = null;
-let servicePurchasePromptTimer = null;
 
-function scheduleServicePurchasePrompt({ ready, details, onConfirm }) {
-  const loading = $("dataPurchaseLoading");
+function scheduleServicePurchasePrompt({ ready, details, onConfirm, button, proceed = false }) {
   const modal = $("servicePurchasePinModal");
-  clearTimeout(servicePurchasePromptTimer);
-  if (!ready || !modal) {
-    loading?.classList.remove("active");
+  if (!button || !modal) return;
+  if (!ready) {
+    button.hidden = false;
+    button.disabled = true;
+    button.classList.remove("is-ready");
     pendingServicePurchaseAction = null;
     return;
   }
+  button.hidden = false;
+  button.disabled = false;
+  button.classList.add("is-ready");
+  button.textContent = "Proceed";
   pendingServicePurchaseAction = onConfirm;
-  loading?.classList.add("active");
-  servicePurchasePromptTimer = setTimeout(() => {
-    loading?.classList.remove("active");
-    $("servicePurchasePinDetails").textContent = details;
-    $("servicePurchasePinInput").value = "";
-    $("servicePurchasePinMessage").textContent = "";
-    $("servicePurchasePinMessage").className = "pin-prompt-message";
-    modal.classList.add("active");
-    setTimeout(() => $("servicePurchasePinInput")?.focus(), 50);
-  }, 2000);
+  if (!proceed) return;
+  $("servicePurchasePinDetails").textContent = details;
+  $("servicePurchasePinInput").value = "";
+  $("servicePurchasePinMessage").textContent = "";
+  $("servicePurchasePinMessage").className = "pin-prompt-message";
+  modal.classList.add("active");
+  setTimeout(() => $("servicePurchasePinInput")?.focus(), 50);
 }
 
 function setupServicePurchasePinPrompt() {
@@ -1166,8 +1151,6 @@ function setupServicePurchasePinPrompt() {
   if (!modal || !pinInput || !confirm) return;
 
   const close = () => {
-    clearTimeout(servicePurchasePromptTimer);
-    $("dataPurchaseLoading")?.classList.remove("active");
     modal.classList.remove("active");
     pinInput.value = "";
     pendingServicePurchaseAction = null;
@@ -1208,12 +1191,12 @@ function setupAirtimePurchase() {
   if (!button) return;
   let selectedNetwork = "";
 
-  const maybePrompt = () => {
+  const maybePrompt = (proceed = false) => {
     const phone = $("airtimePhone")?.value.trim() || "";
     const amount = Number($("airtimeAmount")?.value);
     const ready = !!selectedNetwork && /^\d{10,15}$/.test(phone) && amount >= 100 && amount <= 50000;
     scheduleServicePurchasePrompt({
-      ready, details: `Airtime · ${phone} · ${money(amount)}`,
+      ready, details: `Airtime · ${phone} · ${money(amount)}`, button, proceed,
       onConfirm: async (pin) => {
         $("airtimePin").value = pin;
         try {
@@ -1224,6 +1207,7 @@ function setupAirtimePurchase() {
           $("airtimePhone").value = ""; $("airtimeAmount").value = ""; $("airtimePin").value = "";
           selectedNetwork = "";
           document.querySelectorAll("[data-airtime-network]").forEach((item) => item.classList.remove("selected"));
+          maybePrompt();
           await refreshHome(); await loadTransactions();
           return true;
         } catch (error) {
@@ -1236,6 +1220,7 @@ function setupAirtimePurchase() {
     });
   };
 
+  button.addEventListener("click", () => maybePrompt(true));
   document.querySelectorAll("[data-airtime-network]").forEach((card) => {
     card.addEventListener("click", () => {
       selectedNetwork = card.dataset.airtimeNetwork || "";
@@ -1253,14 +1238,14 @@ function setupAirtimePurchase() {
 function setupElectricityPayment() {
   const button = $("payElectricityBtn");
   if (!button) return;
-  const maybePrompt = () => {
+  const maybePrompt = (proceed = false) => {
     const serviceID = $("electricityProvider")?.value || "";
     const customerID = $("electricityCustomer")?.value.trim() || "";
     const phone = $("electricityPhone")?.value.trim() || "";
     const amount = Number($("electricityAmount")?.value);
     const ready = !!serviceID && /^\d{5,30}$/.test(customerID) && /^\d{10,15}$/.test(phone) && amount >= 100;
     scheduleServicePurchasePrompt({
-      ready, details:`Electricity · ${customerID} · ${money(amount)}`,
+      ready, details:`Electricity · ${customerID} · ${money(amount)}`, button, proceed,
       onConfirm: async (pin) => {
         $("electricityPin").value = pin;
         try {
@@ -1268,6 +1253,7 @@ function setupElectricityPayment() {
           const data = await apiRequest("/electricity/purchase", { method:"POST", body:JSON.stringify({ serviceID, customerID, phone, amount, pin }) });
           showToast(data.message || "Electricity payment submitted successfully.", "success");
           $("electricityCustomer").value = ""; $("electricityPhone").value = ""; $("electricityAmount").value = ""; $("electricityPin").value = "";
+          maybePrompt();
           await refreshHome();
           return true;
         } catch (error) {
@@ -1279,6 +1265,7 @@ function setupElectricityPayment() {
       },
     });
   };
+  button.addEventListener("click", () => maybePrompt(true));
   ["electricityProvider", "electricityCustomer", "electricityPhone", "electricityAmount"].forEach((id) => {
     $(id)?.addEventListener(id === "electricityProvider" ? "change" : "input", maybePrompt);
   });
@@ -1290,7 +1277,7 @@ function setupElectricityPayment() {
 function setupTVPayment() {
   const button = $("payTvBtn");
   if (!button) return;
-  const maybePrompt = () => {
+  const maybePrompt = (proceed = false) => {
     const serviceID = $("tvProvider")?.value || "";
     const customerID = $("tvCustomer")?.value.trim() || "";
     const phone = $("tvPhone")?.value.trim() || "";
@@ -1298,7 +1285,7 @@ function setupTVPayment() {
     const amount = Number($("tvAmount")?.value);
     const ready = !!serviceID && /^\d{5,30}$/.test(customerID) && /^\d{10,15}$/.test(phone) && !!plan && amount > 0;
     scheduleServicePurchasePrompt({
-      ready, details:`TV subscription · ${customerID} · ${money(amount)}`,
+      ready, details:`TV subscription · ${customerID} · ${money(amount)}`, button, proceed,
       onConfirm: async (pin) => {
         $("tvPin").value = pin;
         try {
@@ -1306,6 +1293,7 @@ function setupTVPayment() {
           const data = await apiRequest("/tv/purchase", { method:"POST", body:JSON.stringify({ serviceID, customerID, phone, plan, amount, pin }) });
           showToast(data.message || "TV subscription submitted successfully.", "success");
           $("tvCustomer").value = ""; $("tvPhone").value = ""; $("tvAmount").value = ""; $("tvPin").value = "";
+          maybePrompt();
           await refreshHome();
           return true;
         } catch (error) {
@@ -1317,6 +1305,7 @@ function setupTVPayment() {
       },
     });
   };
+  button.addEventListener("click", () => maybePrompt(true));
   ["tvProvider", "tvCustomer", "tvPhone", "tvPlan", "tvAmount"].forEach((id) => {
     $(id)?.addEventListener(["tvProvider", "tvPlan"].includes(id) ? "change" : "input", maybePrompt);
   });
