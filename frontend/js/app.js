@@ -186,7 +186,7 @@ function checkAuthentication() {
    PAGE NAVIGATION
    ========================================================= */
 
-function showPage(page) {
+function showPage(page, { fromHistory = false } = {}) {
   if (!page) return;
 
   const pages = document.querySelectorAll(".page");
@@ -200,6 +200,11 @@ function showPage(page) {
   if (!target) {
     console.warn(`Page not found: ${page}Page`);
     return;
+  }
+
+  const currentPage = document.querySelector(".page.active")?.id.replace(/Page$/, "");
+  if (currentPage && currentPage !== page && !fromHistory) {
+    window.history.pushState({ ...(window.history.state || {}), mamuPage: page }, "", window.location.href);
   }
 
   target.classList.add("active");
@@ -226,6 +231,16 @@ function showPage(page) {
 }
 
 function setupNavigation() {
+  const activePage = document.querySelector(".page.active")?.id.replace(/Page$/, "") || "home";
+  if (!window.history.state?.mamuPage) {
+    window.history.replaceState({ ...(window.history.state || {}), mamuPage: activePage }, "", window.location.href);
+  }
+  window.addEventListener("popstate", (event) => {
+    const page = event.state?.mamuPage;
+    if (!page || !document.getElementById(`${page}Page`)) return;
+    showPage(page, { fromHistory: true });
+  });
+
   document.querySelectorAll("[data-page]").forEach((element) => {
     element.addEventListener("click", () => {
       let page = element.dataset.page || "";
@@ -2379,6 +2394,7 @@ async function initApp() {
   setupNavigation();
   setupBalanceToggle();
   setupSideMenu();
+  setupDashboardNotifications();
 
   setupDataPurchase();
   setupServicePurchasePinPrompt();
@@ -2509,36 +2525,79 @@ logoutBtn?.addEventListener("click", () => {
   if (!menuBtn || !sideMenu || !menuOverlay) return;
 
   function openMenu() {
-    sideMenu.classList.add("active");
-    menuOverlay.classList.add("active");
+    sideMenu.classList.add("open");
+    menuOverlay.classList.add("show");
+    menuBtn.setAttribute("aria-expanded", "true");
   }
 
   function closeMenu() {
-    sideMenu.classList.remove("active");
-    menuOverlay.classList.remove("active");
+    sideMenu.classList.remove("open");
+    menuOverlay.classList.remove("show");
+    menuBtn.setAttribute("aria-expanded", "false");
   }
 
-  menuBtn.addEventListener("click", openMenu);
+  menuBtn.addEventListener("click", () => {
+    if (sideMenu.classList.contains("open")) closeMenu();
+    else openMenu();
+  });
   menuClose?.addEventListener("click", closeMenu);
   menuOverlay.addEventListener("click", closeMenu);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && sideMenu.classList.contains("open")) closeMenu();
+  });
 
-  document.querySelectorAll("[data-menu-page]").forEach((item) => {
-    item.addEventListener("click", (event) => {
-      event.preventDefault();
+  sideMenu.querySelectorAll("[data-page]").forEach((item) => {
+    item.addEventListener("click", closeMenu);
+  });
+}
 
-      const page = item.dataset.menuPage;
+function setupDashboardNotifications() {
+  const button = $("notificationBtn");
+  const modal = $("notificationModal");
+  const closeButton = $("closeNotificationBtn");
+  const list = $("notificationList");
+  const historyButton = $("viewAllNotificationsBtn");
+  if (!button || !modal || !list) return;
 
-      closeMenu();
+  const close = () => {
+    modal.classList.remove("active");
+    modal.setAttribute("aria-hidden", "true");
+  };
+  const loadRecentActivity = async () => {
+    list.innerHTML = '<div class="empty-state">Loading recent activity…</div>';
+    try {
+      const data = await apiRequest("/wallet/transactions");
+      const transactions = Array.isArray(data.transactions) ? data.transactions.slice(0, 6) : [];
+      if (!transactions.length) {
+        list.innerHTML = '<div class="empty-state"><h4>You’re all caught up</h4><p>There is no recent account activity to show.</p></div>';
+        return;
+      }
+      list.innerHTML = transactions.map((transaction) => {
+        const status = String(transaction.status || "pending").toLowerCase();
+        const statusLabel = status === "success" || status === "successful" ? "Successful" : status === "failed" || status === "fail" ? "Failed" : "Pending";
+        const description = transaction.description || formatDate(transaction.createdAt) || "Account activity";
+        return `<article class="notification-item"><span class="notification-state notification-state-${escapeHtml(status)}" aria-hidden="true"></span><div class="notification-copy"><strong>${escapeHtml(transactionLabel(transaction.type))}</strong><p>${escapeHtml(description)}</p><small>${statusLabel}${formatDate(transaction.createdAt) ? ` · ${escapeHtml(formatDate(transaction.createdAt))}` : ""}</small></div><strong class="notification-amount">${money(transaction.amount)}</strong></article>`;
+      }).join("");
+    } catch (error) {
+      list.innerHTML = `<div class="empty-state"><h4>Could not load updates</h4><p>${escapeHtml(error.message || "Check your connection and try again.")}</p></div>`;
+    }
+  };
 
-      if (page === "home") showPage("home");
-      if (page === "data") showPage("data");
-      if (page === "airtime") showPage("airtime");
-      if (page === "tv") showPage("tv");
-      if (page === "electricity") showPage("electricity");
-      if (page === "transactions") showPage("transactions");
-      if (page === "referral") showPage("referral");
-      if (page === "profile") showPage("profile");
-    });
+  button.addEventListener("click", () => {
+    modal.classList.add("active");
+    modal.setAttribute("aria-hidden", "false");
+    loadRecentActivity();
+    closeButton?.focus();
+  });
+  closeButton?.addEventListener("click", close);
+  modal.addEventListener("click", (event) => { if (event.target === modal) close(); });
+  historyButton?.addEventListener("click", () => {
+    close();
+    showPage("transactions");
+    loadTransactions();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("active")) close();
   });
 }
 /* =========================================================
@@ -2820,7 +2879,7 @@ if (!currentUser) {
   }
 } 
  const username =
-    currentUser?.username || "User";
+    currentUser?.name || currentUser?.username || "User";
 
   const greeting =
     $("headerGreeting");
@@ -2832,7 +2891,7 @@ if (!currentUser) {
     $("headerAccountType");
 
   if (greeting) {
-    greeting.textContent = "Welcome back";
+    greeting.textContent = "Welcome back,";
   }
 
   if (welcomeName) {
@@ -2840,8 +2899,7 @@ if (!currentUser) {
   }
 
   if (accountType) {
-    accountType.textContent =
-      currentUser?.accountType || "Smart Earner";
+    accountType.textContent = `MAMU DATA SUB · ${currentUser?.accountType || "Smart Earner"}`;
   }
 
   updateProfilePhotoUI(
