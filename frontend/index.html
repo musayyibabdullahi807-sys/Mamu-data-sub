@@ -10,7 +10,7 @@
   <title>MAMU DATA SUB</title>
   <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";var awayAt=Number(localStorage.getItem("mamu_app_locked_at"))||0;var mustLock=localStorage.getItem("mamu_app_is_locked")==="1"||(awayAt>0&&Date.now()-awayAt>=10000);if(localStorage.getItem("mamu_token")&&mustLock)document.documentElement.dataset.appLockRequired="true";else if(awayAt) localStorage.removeItem("mamu_app_locked_at");}catch(_){}</script>
   <link rel="stylesheet" href="./css/style.css?v=pull-refresh-2">
-  <link rel="stylesheet" href="./css/marketplace.css?v=menus-stay-put-2">
+  <link rel="stylesheet" href="./css/marketplace.css?v=market-cart-1">
 </head>
 
 <body>
@@ -973,6 +973,15 @@
         <span class="settings-item-arrow">›</span>
       </button>
 
+      <button class="settings-item" id="settingsBiometricBtn" type="button">
+        <span class="settings-item-icon">☝</span>
+        <span class="settings-item-content">
+          <strong>Fingerprint or Face ID</strong>
+          <small id="settingsBiometricStatus">Set up device unlock</small>
+        </span>
+        <span class="settings-item-arrow">›</span>
+      </button>
+
       <button class="settings-item" id="settingsSupportBtn" type="button">
         <span class="settings-item-icon">S</span>
         <span class="settings-item-content">
@@ -1029,12 +1038,31 @@
   </section>
 </section>
 
-</div>
-
 <section id="marketProductDetailPage" class="page product-detail-page">
   <header class="inner-header"><button id="marketProductDetailBack" class="back-btn" type="button" aria-label="Back to Marketplace">‹</button><div><h2 id="marketProductDetailTitle"></h2><p id="marketProductDetailShop"></p></div><button id="marketProductDelete" class="product-delete-button" type="button" hidden>Delete</button></header>
-  <main class="page-content"><div class="product-detail-page-content"><div class="product-detail-media-row"><div class="product-detail-photo-panel"><div class="product-detail-viewer"><button id="marketProductPrevious" class="product-detail-arrow previous" type="button" aria-label="Previous photo">‹</button><div id="marketProductDetailMedia" class="product-detail-media"></div><button id="marketProductNext" class="product-detail-arrow next" type="button" aria-label="Next photo">›</button></div><div id="marketProductDetailCounter" class="product-detail-counter"></div></div><div id="marketProductDetailVideo" class="product-detail-video"></div></div><div class="product-detail-info"><strong id="marketProductDetailPrice" class="market-price"></strong><p id="marketProductDetailCategory"></p><p id="marketProductDetailDescription"></p><p id="marketProductDetailStock"></p></div></div></main>
+  <main class="page-content"><div class="product-detail-page-content"><div class="product-detail-media-row"><div class="product-detail-photo-panel"><div class="product-detail-viewer"><button id="marketProductPrevious" class="product-detail-arrow previous" type="button" aria-label="Previous photo">‹</button><div id="marketProductDetailMedia" class="product-detail-media"></div><button id="marketProductNext" class="product-detail-arrow next" type="button" aria-label="Next photo">›</button></div><div id="marketProductDetailCounter" class="product-detail-counter"></div></div><div id="marketProductDetailVideo" class="product-detail-video"></div></div><div class="product-detail-info"><strong id="marketProductDetailPrice" class="market-price"></strong><p id="marketProductDetailCategory"></p><p id="marketProductDetailDescription"></p><p id="marketProductDetailStock"></p><button id="marketProductAddToCart" class="market-button" type="button">Add to Cart</button><p id="marketCartAddStatus" class="market-message" aria-live="polite"></p><button id="marketOpenCartFromProduct" class="market-button secondary" type="button" hidden>View Cart</button></div></div></main>
 </section>
+
+<section id="marketplaceCartPage" class="page marketplace-cart-page">
+  <header class="inner-header"><button class="back-btn" data-back="marketplacePage" type="button" aria-label="Back to Marketplace">‹</button><div><h2>Cart</h2><p>Items selected before checkout</p></div></header>
+  <main class="page-content"><div id="marketCartItems" class="market-cart-items"><div class="market-status">Your cart is empty.</div></div><div id="marketCartSummary" class="market-cart-summary" hidden></div><p class="market-cart-note">Prices and availability will be confirmed before payment.</p><button class="market-button secondary" data-page="marketplacePage" type="button">Continue shopping</button></main>
+</section>
+
+</div>
+
+<div id="biometricSetupModal" class="modal-overlay" aria-hidden="true">
+  <section class="modal-box" role="dialog" aria-modal="true" aria-labelledby="biometricSetupTitle">
+    <h2 id="biometricSetupTitle">Set up Fingerprint or Face ID</h2>
+    <p>Enter your transaction PIN, then confirm with this device’s fingerprint or Face ID.</p>
+    <div class="form-group">
+      <label for="biometricSetupPin">Transaction PIN</label>
+      <input id="biometricSetupPin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="Enter 4-digit PIN">
+    </div>
+    <p id="biometricSetupMessage" aria-live="polite"></p>
+    <button id="confirmBiometricSetupBtn" class="primary-btn full-btn" type="button">Continue</button>
+    <button id="cancelBiometricSetupBtn" class="danger-btn full-btn" type="button">Cancel</button>
+  </section>
+</div>
 
 <!-- RESET TRANSACTION PIN MODAL -->
 <div id="resetTransactionPinModal" class="modal-overlay">
@@ -1445,9 +1473,9 @@
     <span>Marketplace</span>
   </button>
 
-  <button class="bottom-nav-item" data-page="fundPage" type="button">
-    <span class="icon">₦</span>
-    <span>Wallet</span>
+  <button class="bottom-nav-item" data-page="marketplaceCartPage" type="button" aria-label="Open shopping cart">
+    <span class="icon">🛒</span>
+    <span>Cart</span>
   </button>
 
   <button class="bottom-nav-item" data-page="transactionsPage" type="button">
@@ -1487,8 +1515,8 @@
   </section>
 </div>
 
-<script src="./js/app.js?v=gsubz-provider-cleanup-1"></script>
-<script src="./js/marketplace-product-detail.js?v=hide-nav-1"></script>
+<script src="./js/app.js?v=biometric-settings-2"></script>
+<script src="./js/marketplace-product-detail.js?v=market-cart-1"></script>
 <script src="./js/marketplace-blob-client.bundle.js?v=vercel-blob-1"></script>
 <script src="./js/marketplace.js?v=business-admin-controls-2"></script>
 <script src="./js/gsubz-extras.js"></script>

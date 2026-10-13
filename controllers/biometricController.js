@@ -19,11 +19,19 @@ function relyingParty(req) {
 
 function credentialRecord(passkey) {
   return {
-    id: passkey.credentialID,
+    id: normalizeCredentialID(passkey.credentialID),
     publicKey: Buffer.from(passkey.publicKey, "base64url"),
     counter: passkey.counter,
     transports: passkey.transports || [],
   };
+}
+
+// Older registrations stored Base64URL(credential.id) instead of credential.id.
+// Decode that extra layer when it is present so those passkeys remain usable.
+function normalizeCredentialID(value) {
+  const decoded = Buffer.from(value, "base64url").toString("utf8");
+  if (/^[A-Za-z0-9_-]+$/.test(decoded) && Buffer.from(decoded).toString("base64url") === value) return decoded;
+  return value;
 }
 
 async function registrationOptions(req, res) {
@@ -43,8 +51,8 @@ async function registrationOptions(req, res) {
       userName: user.username || user.phone,
       userDisplayName: user.name,
       attestationType: "none",
-      excludeCredentials: (user.passkeys || []).map((key) => ({ id: key.credentialID, transports: key.transports })),
-      authenticatorSelection: { residentKey: "preferred", userVerification: "required" },
+      excludeCredentials: (user.passkeys || []).map((key) => ({ id: normalizeCredentialID(key.credentialID), transports: key.transports })),
+      authenticatorSelection: { authenticatorAttachment: "platform", residentKey: "preferred", userVerification: "required" },
     });
     user.passkeyChallenge = options.challenge;
     user.passkeyChallengeType = "registration";
@@ -76,7 +84,8 @@ async function verifyRegistration(req, res) {
     }
     const info = verification.registrationInfo;
     const credential = info.credential;
-    const credentialID = Buffer.from(credential.id).toString("base64url");
+    // SimpleWebAuthn v14 already returns this ID as Base64URL.
+    const credentialID = credential.id;
     if (!(user.passkeys || []).some((item) => item.credentialID === credentialID)) {
       user.passkeys.push({
         credentialID,
@@ -101,7 +110,7 @@ async function authenticationOptions(req, res) {
     const { rpID } = relyingParty(req);
     const options = await generateAuthenticationOptions({
       rpID,
-      allowCredentials: user.passkeys.map((key) => ({ id: key.credentialID, transports: key.transports })),
+      allowCredentials: user.passkeys.map((key) => ({ id: normalizeCredentialID(key.credentialID), transports: key.transports })),
       userVerification: "required",
     });
     user.passkeyChallenge = options.challenge;
@@ -119,7 +128,7 @@ async function verifyAuthentication(req, res) {
     const user = await User.findById(req.user._id);
     if (!user || !user.passkeyChallenge || user.passkeyChallengeType !== "authentication") return res.status(400).json({ success: false, message: "Biometric request expired. Try again." });
     const credentialID = req.body.credential?.id;
-    const passkey = (user.passkeys || []).find((key) => key.credentialID === credentialID);
+    const passkey = (user.passkeys || []).find((key) => normalizeCredentialID(key.credentialID) === credentialID);
     if (!passkey) return res.status(401).json({ success: false, message: "This device is not registered for biometric unlock." });
     const { origin, rpID } = relyingParty(req);
     const verification = await verifyAuthenticationResponse({
@@ -137,6 +146,7 @@ async function verifyAuthentication(req, res) {
       return res.status(401).json({ success: false, message: "Biometric check failed." });
     }
     passkey.counter = verification.authenticationInfo.newCounter;
+    passkey.credentialID = credentialID;
     await user.save();
     return res.json({ success: true, message: "Biometric unlock verified." });
   } catch (error) {

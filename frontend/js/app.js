@@ -1854,13 +1854,20 @@ function setupAppLock() {
     return data;
   };
   let biometricEnabled = false;
-  if (biometricButton && window.PublicKeyCredential && navigator.credentials) {
-    securityFetch("/passkey/status").then((data) => {
+  const refreshBiometricStatus = async () => {
+    if (!biometricButton || !window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
+      if (biometricButton) biometricButton.hidden = true;
+      return;
+    }
+    try {
+      const data = await securityFetch("/passkey/status");
       biometricEnabled = data.enabled;
-      biometricButton.hidden = false;
-      biometricButton.textContent = biometricEnabled ? "Unlock with fingerprint or Face ID" : "Enable fingerprint or Face ID";
-    }).catch(() => { biometricButton.hidden = true; });
-  }
+      biometricButton.hidden = !biometricEnabled;
+      biometricButton.textContent = "Unlock with fingerprint or Face ID";
+    } catch (_) { biometricButton.hidden = true; }
+  };
+  refreshBiometricStatus();
+  window.addEventListener("mamu:passkey-changed", refreshBiometricStatus);
 
   let locked = document.documentElement.dataset.appLockRequired === "true" && Boolean(getToken());
   let lockTimer;
@@ -1946,19 +1953,7 @@ function setupAppLock() {
         await securityFetch("/passkey/authenticate/verify", { credential: serializeCredential(credential) });
         setLocked(false);
       } else {
-        if (!/^\d{4}$/.test(input.value)) {
-          message.textContent = "Enter your 4-digit transaction PIN above to enable biometric unlock.";
-          return;
-        }
-        message.textContent = "Setting up device biometrics…";
-        const { options } = await securityFetch("/passkey/register/options", { pin: input.value });
-        const credential = await navigator.credentials.create({ publicKey: passkeyRequestOptions(options) });
-        await securityFetch("/passkey/register/verify", { credential: serializeCredential(credential) });
-        biometricEnabled = true;
-        input.value = "";
-        updateDots();
-        message.textContent = "Biometric unlock is ready on this device.";
-        biometricButton.textContent = "Unlock with fingerprint or Face ID";
+        message.textContent = "Set up fingerprint or Face ID in Settings first.";
       }
     } catch (error) {
       if (error.name !== "NotAllowedError" && error.name !== "AbortError") message.textContent = error.message || "Biometric unlock failed. Use your PIN.";
@@ -2027,6 +2022,8 @@ function setupSettings() {
     $("resetTransactionPinBtn")?.click();
   });
 
+  setupBiometricSettings();
+
   $("settingsSupportBtn")?.addEventListener("click", () => {
     openWhatsAppSupport();
   });
@@ -2034,6 +2031,123 @@ function setupSettings() {
   $("settingsSignOutBtn")?.addEventListener("click", () => {
     $("signOutBtn")?.click();
   });
+}
+
+function setupBiometricSettings() {
+  const settingsButton = $("settingsBiometricBtn");
+  const status = $("settingsBiometricStatus");
+  const modal = $("biometricSetupModal");
+  const pinInput = $("biometricSetupPin");
+  const message = $("biometricSetupMessage");
+  const confirmButton = $("confirmBiometricSetupBtn");
+  const closeButton = $("cancelBiometricSetupBtn");
+  if (!settingsButton || !modal || !pinInput || !confirmButton) return;
+
+  const setStatus = (text) => {
+    if (status) status.textContent = text;
+    // Keep the Settings row clickable so the setup dialog can explain any
+    // browser or server limitation instead of appearing unresponsive.
+    settingsButton.disabled = false;
+  };
+  const fetchPasskeyStatus = async () => {
+    if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
+      setStatus("Open MAMU in a secure browser that supports device biometrics");
+      return false;
+    }
+    try {
+      const data = await apiRequest("/security/passkey/status");
+      setStatus(data.enabled ? "Biometric unlock is enabled for this account" : "Not set up on this account");
+      return true;
+    } catch (error) {
+      setStatus(error.message || "Could not check biometric setup");
+      return false;
+    }
+  };
+  const fromBase64Url = (value) => {
+    const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+    return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+  };
+  const prepareOptions = (options) => {
+    options.challenge = fromBase64Url(options.challenge);
+    if (options.user?.id) options.user.id = fromBase64Url(options.user.id);
+    ["allowCredentials", "excludeCredentials"].forEach((key) => {
+      if (options[key]) options[key] = options[key].map((item) => ({ ...item, id: fromBase64Url(item.id) }));
+    });
+    return options;
+  };
+  const encodeBase64Url = (buffer) => {
+    let binary = "";
+    new Uint8Array(buffer).forEach((byte) => { binary += String.fromCharCode(byte); });
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  };
+  const serializeCredential = (credential) => {
+    const response = credential.response;
+    const serialized = { id: credential.id, rawId: encodeBase64Url(credential.rawId), type: credential.type, response: {} };
+    ["clientDataJSON", "attestationObject", "authenticatorData", "signature", "userHandle"].forEach((key) => {
+      if (response[key]) serialized.response[key] = encodeBase64Url(response[key]);
+    });
+    if (response.getTransports) serialized.response.transports = response.getTransports();
+    return serialized;
+  };
+  const closeModal = () => {
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+    pinInput.value = "";
+    if (message) message.textContent = "";
+  };
+
+  settingsButton.addEventListener("click", async () => {
+    pinInput.value = "";
+    if (message) message.textContent = "";
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+    pinInput.focus();
+    await fetchPasskeyStatus();
+    if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) {
+      if (message) message.textContent = "This browser cannot create a device passkey. Open MAMU in Chrome or another secure browser.";
+    } else if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function" &&
+               !await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
+      if (message) message.textContent = "This browser cannot access the phone's fingerprint or Face ID. Try opening MAMU directly in Chrome.";
+    }
+  });
+  closeButton?.addEventListener("click", closeModal);
+  modal.addEventListener("click", (event) => { if (event.target === modal) closeModal(); });
+  confirmButton.addEventListener("click", async () => {
+    if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials?.create) {
+      if (message) message.textContent = "This browser cannot create a device passkey. Open MAMU in Chrome or another secure browser.";
+      return;
+    }
+    if (!/^\d{4}$/.test(pinInput.value)) {
+      if (message) message.textContent = "Enter your 4-digit transaction PIN.";
+      pinInput.focus();
+      return;
+    }
+    confirmButton.disabled = true;
+    if (message) message.textContent = "Waiting for fingerprint or Face ID confirmation…";
+    try {
+      const optionsResult = await apiRequest("/security/passkey/register/options", {
+        method: "POST",
+        body: JSON.stringify({ pin: pinInput.value }),
+      });
+      const credential = await navigator.credentials.create({ publicKey: prepareOptions(optionsResult.options) });
+      if (!credential) throw new Error("The device did not return a biometric credential.");
+      await apiRequest("/security/passkey/register/verify", {
+        method: "POST",
+        body: JSON.stringify({ credential: serializeCredential(credential) }),
+      });
+      closeModal();
+      await fetchPasskeyStatus();
+      window.dispatchEvent(new Event("mamu:passkey-changed"));
+      showToast("Fingerprint or Face ID is ready for app unlock.");
+    } catch (error) {
+      if (message) {
+        message.textContent = error.name === "NotAllowedError" || error.name === "AbortError"
+          ? "Biometric setup was cancelled or the device could not confirm. Try again in your device settings."
+          : (error.message || "Could not set up biometric unlock.");
+      }
+    } finally { confirmButton.disabled = false; }
+  });
+  fetchPasskeyStatus();
 }
 
 

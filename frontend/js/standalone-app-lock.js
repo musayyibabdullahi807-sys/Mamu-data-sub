@@ -91,8 +91,8 @@
   if (biometricButton && window.PublicKeyCredential && navigator.credentials) {
     passkeyFetch("/passkey/status").then((data) => {
       biometricEnabled = data.enabled;
-      biometricButton.hidden = false;
-      biometricButton.textContent = biometricEnabled ? "Unlock with fingerprint or Face ID" : "Enable fingerprint or Face ID";
+      biometricButton.hidden = !biometricEnabled;
+      biometricButton.textContent = "Unlock with fingerprint or Face ID";
     }).catch(() => { biometricButton.hidden = true; });
   }
   const update = () => dots.forEach((dot, index) => dot.classList.toggle("on", index < pin.length));
@@ -138,14 +138,7 @@
           localStorage.removeItem(lockedAtKey); localStorage.removeItem(lockedStateKey);
           document.documentElement.dataset.appLockRequired = "false"; root.remove(); schedule(); return;
         }
-        if (!/^\d{4}$/.test(pin)) { error.textContent = "Enter your 4-digit transaction PIN to enable biometric unlock."; return; }
-        error.textContent = "Setting up device biometrics…";
-        const { options } = await passkeyFetch("/passkey/register/options", { pin });
-        const credential = await navigator.credentials.create({ publicKey: prepareOptions(options) });
-        await passkeyFetch("/passkey/register/verify", { credential: serializeCredential(credential) });
-        biometricEnabled = true; pin = ""; update();
-        error.textContent = "Biometric unlock is ready on this device.";
-        button.textContent = "Unlock with fingerprint or Face ID";
+        error.textContent = "Set up fingerprint or Face ID in Settings first.";
       } catch (err) {
         if (err.name !== "NotAllowedError" && err.name !== "AbortError") error.textContent = err.message || "Biometric unlock failed. Use your PIN.";
       } finally { busy = false; button.disabled = false; }
