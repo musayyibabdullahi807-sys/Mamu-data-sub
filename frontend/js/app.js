@@ -205,6 +205,12 @@ function showPage(page) {
 
   target.classList.add("active");
 
+  const primaryNavigationPages = new Set(["home", "marketplace", "marketplaceCart", "transactions", "settings"]);
+  const bottomNav = document.querySelector(".bottom-nav");
+  const showBottomNav = primaryNavigationPages.has(page);
+  bottomNav?.classList.toggle("quick-service-hidden", !showBottomNav);
+  bottomNav?.setAttribute("aria-hidden", String(!showBottomNav));
+
   document.querySelectorAll("[data-page]").forEach((element) => {
     let buttonPage = element.dataset.page || "";
 

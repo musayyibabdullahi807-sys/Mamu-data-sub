@@ -3260,6 +3260,7 @@ textarea:focus {
 :root[data-theme="dark"] .quick-service-result { background:#17243a; color:var(--mamu-text); }
 
 .bottom-nav.product-detail-hidden{display:none!important}
+.bottom-nav.quick-service-hidden{display:none!important}
 
 
 #settingsMarketplaceAdminBtn[hidden], #marketAdminLink[hidden], #marketAdminSection[hidden], #admin-section[hidden], .admin-wrap[hidden] { display:none !important; }
