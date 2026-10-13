@@ -5,9 +5,27 @@
   let visibleProducts = [];
   let selectedProductImages = [];
   let selectedProductVideo = null;
+  let blobClientLoading = null;
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
   const money = (kobo) => new Intl.NumberFormat("en-NG", { style:"currency", currency:"NGN", maximumFractionDigits:2 }).format(kobo / 100);
   const authHeaders = (json = false) => ({ ...(json ? { "Content-Type":"application/json" } : {}), ...(token() ? { Authorization:`Bearer ${token()}` } : {}) });
+
+  function ensureBlobClient() {
+    if (typeof window.uploadMarketplaceBlob === "function") return Promise.resolve();
+    if (!blobClientLoading) {
+      blobClientLoading = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "/js/marketplace-blob-client.bundle.js?v=vercel-blob-1";
+        script.onload = resolve;
+        script.onerror = () => {
+          blobClientLoading = null;
+          reject(new Error("Vercel upload support did not load. Refresh and try again."));
+        };
+        document.head.appendChild(script);
+      });
+    }
+    return blobClientLoading;
+  }
 
   const prepareMarketplacePhoto = async (file) => {
     if (file.size <= 4 * 1024 * 1024) return file;
@@ -117,9 +135,17 @@
   document.getElementById("marketAdminLink").addEventListener("click", () => { window.location.href = "/marketplace-admin.html"; });
   const settingsAdminButton = document.getElementById("settingsMarketplaceAdminBtn");
   if (settingsAdminButton && token()) {
-    fetch("/api/marketplace/admin/seller-applications", { headers:authHeaders() })
-      .then((response) => { if (response.ok) settingsAdminButton.hidden = false; })
-      .catch(() => {});
+    let adminAccessChecked = false;
+    const checkAdminAccess = async () => {
+      if (adminAccessChecked) return;
+      adminAccessChecked = true;
+      try {
+        const response = await fetch("/api/marketplace/admin/seller-applications", { headers:authHeaders() });
+        if (response.ok) settingsAdminButton.hidden = false;
+        else if (response.status !== 401 && response.status !== 403) adminAccessChecked = false;
+      } catch (_) { adminAccessChecked = false; }
+    };
+    document.querySelectorAll('[data-page="settingsPage"]').forEach((button) => button.addEventListener("click", checkAdminAccess));
     settingsAdminButton.addEventListener("click", () => { window.location.href = "/marketplace-admin.html"; });
   }
   window.showMarketplaceMyProducts = async () => {
@@ -261,6 +287,7 @@
               const preparedPhoto = await prepareMarketplacePhoto(mediaFile);
               mediaUrl = await uploadMarketplacePhoto(preparedPhoto, (percentage) => { status.textContent = `Uploading photo ${index + 1}/${selectedProductImages.length}... ${percentage}%`; });
             } else {
+              await ensureBlobClient();
               if (typeof window.uploadMarketplaceBlob !== "function") throw new Error("Vercel upload support did not load. Refresh and try again.");
               mediaUrl = await window.uploadMarketplaceBlob(mediaFile, values.sellerId, (percentage) => { status.textContent = `Uploading ${kind}... ${Math.round(percentage)}%`; });
             }
@@ -291,5 +318,4 @@
     } catch (error) { button.disabled = false; window.alert(error.message); }
   });
 
-  refreshMarketplace();
 })();
