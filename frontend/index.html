@@ -6,6 +6,7 @@
 <link rel="apple-touch-icon" href="./icons/icon-192.png">
 <meta name="theme-color" content="#ffffff">
 <meta charset="UTF-8">
+<meta name="google-site-verification" content="M_aeYtzU81j4YjD2QRGKnsguKWFNIJneSIU7m9raC8Q" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>MAMU DATA SUB</title>
   <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";var awayAt=Number(localStorage.getItem("mamu_app_locked_at"))||0;var mustLock=localStorage.getItem("mamu_app_is_locked")==="1"||awayAt>0;if(localStorage.getItem("mamu_token")&&mustLock)document.documentElement.dataset.appLockRequired="true";else if(!localStorage.getItem("mamu_token")){localStorage.removeItem("mamu_app_locked_at");localStorage.removeItem("mamu_app_is_locked");}}catch(_){}</script>
@@ -274,7 +275,8 @@
 
         <div class="data-plan-section">
 
-          <label class="data-plan-title">Data Plan</label>
+          <label id="dataPlanTitle" class="data-plan-title">Data Plan</label>
+          <div id="dataPlanCategoryCards" class="data-category-grid" aria-label="Data type"></div>
 
           <div id="dataPlanCards" class="data-plan-grid">
 

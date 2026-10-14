@@ -707,35 +707,51 @@ function renderPopularPlans() {
       if (!plan) return;
 
       showPage("data");
-
+      selectedDataNetwork = networkName(plan).toUpperCase();
+      selectedDataCategory = String(plan.planType || "").toLowerCase();
+      document.querySelectorAll("[data-network]").forEach((item) => {
+        item.classList.toggle("selected", (item.dataset.network || "").toUpperCase() === selectedDataNetwork);
+      });
+      populateDataPlanSelect();
       const select = $("dataPlan");
-
       if (select) {
         select.value = plan._id;
+        document.querySelectorAll(".data-plan-card").forEach((item) => item.classList.toggle("selected", item.dataset.planId === String(plan._id)));
         window.queueDataPurchasePinPrompt?.();
       }
     });
   });
 }
 
+const DATA_CATEGORIES = {
+  MTN: [
+    { id: "mtn_gifting", label: "MTN Gifting Data" },
+    { id: "mtn_sme", label: "MTN SME Data" },
+  ],
+  AIRTEL: [
+    { id: "airtel_gifting", label: "Airtel Gifting Data" },
+    { id: "airtel_sme", label: "Airtel SME Data" },
+  ],
+  GLO: [
+    { id: "glo_data", label: "Glo Corporate Gifting Data" },
+    { id: "glo_sme", label: "Glo SME Data" },
+  ],
+  "9MOBILE": [
+    { id: "etisalat_data", label: "9mobile or T2 Data" },
+  ],
+};
+
 let selectedDataNetwork = "";
+let selectedDataCategory = "";
 function setupDataNetworkCards() {
   const cards = document.querySelectorAll("[data-network]");
-
   if (!cards.length) return;
 
   cards.forEach((card) => {
     card.addEventListener("click", () => {
-      const network = card.dataset.network || "";
-
-      selectedDataNetwork = network.toUpperCase();
-
-      cards.forEach((item) => {
-        item.classList.remove("selected");
-      });
-
-      card.classList.add("selected");
-
+      selectedDataNetwork = (card.dataset.network || "").toUpperCase();
+      selectedDataCategory = "";
+      cards.forEach((item) => item.classList.toggle("selected", item === card));
       populateDataPlanSelect();
     });
   });
@@ -744,77 +760,84 @@ function setupDataNetworkCards() {
 function populateDataPlanSelect() {
   const select = $("dataPlan");
   const cardsContainer = $("dataPlanCards");
-
+  const categoryContainer = $("dataPlanCategoryCards");
+  const title = $("dataPlanTitle");
   if (!select) return;
 
-  select.innerHTML = `
-    <option value="">Select a plan</option>
-  `;
+  select.innerHTML = '<option value="">Select a plan</option>';
+  if (cardsContainer) cardsContainer.innerHTML = "";
+  if (categoryContainer) categoryContainer.innerHTML = "";
 
-  if (cardsContainer) {
-    cardsContainer.innerHTML = "";
+  if (!selectedDataNetwork) {
+    if (cardsContainer) cardsContainer.innerHTML = '<div class="data-plan-empty">Select a network to view available data types.</div>';
+    if (title) title.textContent = "Data Plan";
+    return;
   }
 
-  const filteredPlans = selectedDataNetwork
-    ? allDataPlans.filter(
-        (plan) =>
-          networkName(plan).toLowerCase() ===
-          selectedDataNetwork.toLowerCase()
-      )
-    : [];
+  const networkPlans = allDataPlans.filter((plan) =>
+    networkName(plan).toUpperCase() === selectedDataNetwork
+  );
+  const categories = DATA_CATEGORIES[selectedDataNetwork] || [];
 
+  if (!categories.length) {
+    if (cardsContainer) cardsContainer.innerHTML = '<div class="data-plan-empty">No data types are currently available for this network.</div>';
+    if (title) title.textContent = "Data Plan";
+    return;
+  }
+
+  if (!selectedDataCategory || !categories.some((category) => category.id === selectedDataCategory)) {
+    selectedDataCategory = "";
+  }
+
+  categories.forEach((category) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `data-category-card${selectedDataCategory === category.id ? " selected" : ""}`;
+    button.textContent = category.label;
+    button.addEventListener("click", () => {
+      selectedDataCategory = category.id;
+      populateDataPlanSelect();
+    });
+    categoryContainer?.appendChild(button);
+  });
+
+  if (!selectedDataCategory) {
+    if (cardsContainer) cardsContainer.innerHTML = '<div class="data-plan-empty">Choose a data type above to view its plans.</div>';
+    if (title) title.textContent = "Choose Data Type";
+    return;
+  }
+
+  const category = categories.find((item) => item.id === selectedDataCategory);
+  const filteredPlans = networkPlans.filter((plan) => String(plan.planType || "").toLowerCase() === selectedDataCategory);
+  if (title) title.textContent = `${category.label} Plans`;
   if (!filteredPlans.length) {
-    if (cardsContainer) {
-      cardsContainer.innerHTML = `
-        <div class="data-plan-empty">
-          Select a network to view available plans.
-        </div>
-      `;
-    }
+    if (cardsContainer) cardsContainer.innerHTML = '<div class="data-plan-empty">No plans are currently available in this data type.</div>';
     return;
   }
 
   filteredPlans.forEach((plan) => {
     const option = document.createElement("option");
-
     option.value = plan._id;
-
-    option.textContent =
-      `${plan.plan || "Data"} - ` +
-      `${plan.validity || "Data"} - ` +
-      `${money(plan.sellingPrice)}`;
-
+    option.textContent = `${plan.plan || "Data"} - ${plan.validity || "Data"} - ${money(plan.sellingPrice)}`;
     select.appendChild(option);
 
-    if (cardsContainer) {
-      const card = document.createElement("button");
-
-      card.type = "button";
-      card.className = "data-plan-card";
-      card.dataset.planId = plan._id;
-
-      card.innerHTML = `
-        <span class="plan-check">✓</span>
-        <div class="plan-name">${plan.plan || "Data"}</div>
-        <div class="plan-validity">${plan.validity || "Data"}</div>
-        <div class="plan-price">${money(plan.sellingPrice)}</div>
-      `;
-
-      card.addEventListener("click", () => {
-        select.value = plan._id;
-
-        document
-          .querySelectorAll(".data-plan-card")
-          .forEach((item) => {
-            item.classList.remove("selected");
-          });
-
-        card.classList.add("selected");
-        window.queueDataPurchasePinPrompt?.();
-      });
-
-      cardsContainer.appendChild(card);
-    }
+    if (!cardsContainer) return;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "data-plan-card";
+    card.dataset.planId = plan._id;
+    card.innerHTML = `
+      <span class="plan-check">✓</span>
+      <div class="plan-name">${escapeHtml(plan.plan || "Data")}</div>
+      <div class="plan-validity">${escapeHtml(plan.validity || "Data")}</div>
+      <div class="plan-price">${money(plan.sellingPrice)}</div>
+    `;
+    card.addEventListener("click", () => {
+      select.value = plan._id;
+      cardsContainer.querySelectorAll(".data-plan-card").forEach((item) => item.classList.toggle("selected", item === card));
+      window.queueDataPurchasePinPrompt?.();
+    });
+    cardsContainer.appendChild(card);
   });
 }
 
