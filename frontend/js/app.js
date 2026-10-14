@@ -725,8 +725,8 @@ function renderPopularPlans() {
 
 const DATA_CATEGORIES = {
   MTN: [
-    { id: "mtn_gifting", label: "MTN Gifting Data" },
     { id: "mtn_sme", label: "MTN SME Data" },
+    { id: "mtn_gifting", label: "MTN Gifting Data" },
   ],
   AIRTEL: [
     { id: "airtel_gifting", label: "Airtel Gifting Data" },
@@ -750,7 +750,8 @@ function setupDataNetworkCards() {
   cards.forEach((card) => {
     card.addEventListener("click", () => {
       selectedDataNetwork = (card.dataset.network || "").toUpperCase();
-      selectedDataCategory = "";
+      const firstCategory = (DATA_CATEGORIES[selectedDataNetwork] || [])[0];
+      selectedDataCategory = firstCategory?.id || "";
       cards.forEach((item) => item.classList.toggle("selected", item === card));
       populateDataPlanSelect();
     });
@@ -786,7 +787,7 @@ function populateDataPlanSelect() {
   }
 
   if (!selectedDataCategory || !categories.some((category) => category.id === selectedDataCategory)) {
-    selectedDataCategory = "";
+    selectedDataCategory = categories[0]?.id || "";
   }
 
   categories.forEach((category) => {
