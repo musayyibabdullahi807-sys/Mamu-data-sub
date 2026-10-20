@@ -729,12 +729,12 @@ const DATA_CATEGORIES = {
     { id: "mtn_gifting", label: "MTN Gifting Data" },
   ],
   AIRTEL: [
-    { id: "airtel_gifting", label: "Airtel Gifting Data" },
     { id: "airtel_sme", label: "Airtel SME Data" },
+    { id: "airtel_gifting", label: "Airtel Gifting Data" },
   ],
   GLO: [
-    { id: "glo_data", label: "Glo Corporate Gifting Data" },
     { id: "glo_sme", label: "Glo SME Data" },
+    { id: "glo_data", label: "Glo Corporate Gifting Data" },
   ],
   "9MOBILE": [
     { id: "etisalat_data", label: "9mobile or T2 Data" },

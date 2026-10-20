@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#2563eb">
-  <script>try{var awayAt=Number(localStorage.getItem("mamu_app_locked_at"))||0;var mustLock=localStorage.getItem("mamu_app_is_locked")==="1"||(awayAt>0&&Date.now()-awayAt>=10000);if(localStorage.getItem("mamu_token")&&mustLock)document.documentElement.dataset.appLockRequired="true";else if(awayAt)localStorage.removeItem("mamu_app_locked_at");}catch(_){}</script>
+  <script>try{var awayAt=Number(localStorage.getItem("mamu_app_locked_at"))||0;var mustLock=localStorage.getItem("mamu_app_is_locked")==="1"||awayAt>0;if(localStorage.getItem("mamu_token")&&mustLock)document.documentElement.dataset.appLockRequired="true";else if(!localStorage.getItem("mamu_token")){localStorage.removeItem("mamu_app_locked_at");localStorage.removeItem("mamu_app_is_locked");}}catch(_){}</script>
   <style>html[data-app-lock-required="true"] body>:not(#standaloneAppLock){visibility:hidden!important}</style>
   <script>try{if(localStorage.getItem("mamu_theme")==="dark")document.documentElement.dataset.theme="dark";}catch(_){}</script>
   <title>Marketplace Admin | MAMU</title>
@@ -32,6 +32,6 @@
     <div class="toolbar" style="justify-content:space-between"><button id="users-prev">Previous</button><span id="users-page" style="color:#64748b"></span><button id="users-next">Next</button></div>
   </main>
   <script src="/js/marketplace-admin.js?v=account-controls-2"></script>
-  <script src="/js/standalone-app-lock.js?v=biometric-passkey-fix-1"></script>
+  <script src="/js/standalone-app-lock.js?v=resume-lock-1"></script>
 </body>
 </html>

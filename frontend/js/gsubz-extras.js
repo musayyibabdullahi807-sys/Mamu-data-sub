@@ -16,7 +16,6 @@
   };
   let current = null;
   let catalog = [];
-  let timer = null;
   let gameLines = [];
 
   async function request(path, options = {}) {
@@ -44,13 +43,13 @@
   }
 
   function formMarkup(service) {
-    if (service.kind === "education") return `<label>Exam service<select id="extraServiceId" required>${selectOptions([], "Loading services...", x=>x.serviceID, x=>x.label)}</select></label><label>Exam PIN plan<select id="extraPlan" required><option value="">Choose a service first</option></select></label><label>Phone number<input id="extraPhone" type="tel" inputmode="numeric" maxlength="15" placeholder="08030000000" required></label><button class="primary-btn full-btn" type="submit">Continue</button>`;
-    if (service.kind === "social") return `<label>Promotion package<select id="extraPlan" required><option value="">Loading packages...</option></select></label><label>Public post/profile URL<input id="extraLink" type="url" placeholder="https://..." required></label><label>Quantity<input id="extraQuantity" type="number" min="1" step="1" placeholder="e.g. 100" required></label><button class="primary-btn full-btn" type="submit">Continue</button>`;
-    if (service.kind === "games") return `<label>Game<select id="extraGame" required><option value="">Loading games...</option></select></label><label>Game region / product line<select id="extraGameLine" required disabled><option value="">Choose a game first</option></select></label><label>Game product<select id="extraGameProduct" required disabled><option value="">Choose a product line first</option></select></label><div id="extraGameRequirements"></div><p id="extraGameNote" class="quick-service-note"></p><button class="primary-btn full-btn" type="submit">Continue</button>`;
-    if (service.kind === "apps") return `<label>App subscription<select id="extraPlan" required><option value="">Loading packages...</option></select></label><label>Phone number<input id="extraPhone" type="tel" inputmode="numeric" maxlength="15" placeholder="08030000000" required></label><button class="primary-btn full-btn" type="submit">Continue</button>`;
-    if (service.kind === "recharge") return `<label>Network<select id="extraNetwork" required>${selectOptions([{id:"mtn"},{id:"airtel"},{id:"glo"},{id:"9mobile"}], "Choose network", x=>x.id, x=>x.id.toUpperCase())}</select></label><label>PIN value<select id="extraValue" required>${selectOptions([100,200,400,500], "Choose value", x=>x, x=>money(x))}</select></label><label>Number of PINs<input id="extraCount" type="number" min="1" max="500" step="1" placeholder="Minimum 10 for values below ₦500" required></label><p class="quick-service-note">PIN orders use your wallet. For values below ₦500, the provider requires at least 10 PINs.</p><button class="primary-btn full-btn" type="submit">Continue</button>`;
-    if (service.kind === "sms") return `<label>Sender name (3–11 letters)<input id="extraSender" maxlength="11" pattern="[A-Za-z]{3,11}" placeholder="MyShop" required></label><label>Message<textarea id="extraMessage" maxlength="905" rows="4" placeholder="Write your message" required></textarea></label><label>Recipients (separate numbers with commas or new lines)<textarea id="extraRecipients" rows="5" placeholder="08030000000, 08040000000" required></textarea></label><p class="quick-service-note">Messages can cost ₦5 per page per recipient. Blocked content is rejected by the provider.</p><button class="primary-btn full-btn" type="submit">Continue</button>`;
-    return `<label>Country<select id="extraCountry" required><option value="">Loading countries...</option></select></label><label>Data package<select id="extraPlan" required><option value="">Choose a country first</option></select></label><button class="primary-btn full-btn" type="submit">Continue</button>`;
+    if (service.kind === "education") return `<label>Exam service<select id="extraServiceId" required>${selectOptions([], "Loading services...", x=>x.serviceID, x=>x.label)}</select></label><label>Exam PIN plan<select id="extraPlan" required><option value="">Choose a service first</option></select></label><label>Phone number<input id="extraPhone" type="tel" inputmode="numeric" maxlength="15" placeholder="08030000000" required></label><button class="primary-btn full-btn proceed-button" type="submit" disabled>Proceed</button>`;
+    if (service.kind === "social") return `<label>Promotion package<select id="extraPlan" required><option value="">Loading packages...</option></select></label><label>Public post/profile URL<input id="extraLink" type="url" placeholder="https://..." required></label><label>Quantity<input id="extraQuantity" type="number" min="1" step="1" placeholder="e.g. 100" required></label><button class="primary-btn full-btn proceed-button" type="submit" disabled>Proceed</button>`;
+    if (service.kind === "games") return `<label>Game<select id="extraGame" required><option value="">Loading games...</option></select></label><label>Game region / product line<select id="extraGameLine" required disabled><option value="">Choose a game first</option></select></label><label>Game product<select id="extraGameProduct" required disabled><option value="">Choose a product line first</option></select></label><div id="extraGameRequirements"></div><p id="extraGameNote" class="quick-service-note"></p><button class="primary-btn full-btn proceed-button" type="submit" disabled>Proceed</button>`;
+    if (service.kind === "apps") return `<label>App subscription<select id="extraPlan" required><option value="">Loading packages...</option></select></label><label>Phone number<input id="extraPhone" type="tel" inputmode="numeric" maxlength="15" placeholder="08030000000" required></label><button class="primary-btn full-btn proceed-button" type="submit" disabled>Proceed</button>`;
+    if (service.kind === "recharge") return `<label>Network<select id="extraNetwork" required>${selectOptions([{id:"mtn"},{id:"airtel"},{id:"glo"},{id:"9mobile"}], "Choose network", x=>x.id, x=>x.id.toUpperCase())}</select></label><label>PIN value<select id="extraValue" required>${selectOptions([100,200,400,500], "Choose value", x=>x, x=>money(x))}</select></label><label>Number of PINs<input id="extraCount" type="number" min="1" max="500" step="1" placeholder="Minimum 10 for values below ₦500" required></label><p class="quick-service-note">PIN orders use your wallet. For values below ₦500, the provider requires at least 10 PINs.</p><button class="primary-btn full-btn proceed-button" type="submit" disabled>Proceed</button>`;
+    if (service.kind === "sms") return `<label>Sender name (3–11 letters)<input id="extraSender" maxlength="11" pattern="[A-Za-z]{3,11}" placeholder="MyShop" required></label><label>Message<textarea id="extraMessage" maxlength="905" rows="4" placeholder="Write your message" required></textarea></label><label>Recipients (separate numbers with commas or new lines)<textarea id="extraRecipients" rows="5" placeholder="08030000000, 08040000000" required></textarea></label><p class="quick-service-note">Messages can cost ₦5 per page per recipient. Blocked content is rejected by the provider.</p><button class="primary-btn full-btn proceed-button" type="submit" disabled>Proceed</button>`;
+    return `<label>Country<select id="extraCountry" required><option value="">Loading countries...</option></select></label><label>Data package<select id="extraPlan" required><option value="">Choose a country first</option></select></label><button class="primary-btn full-btn proceed-button" type="submit" disabled>Proceed</button>`;
   }
 
   function getPayload() {
@@ -71,6 +70,7 @@
   function installEvents() {
     const form = node("quickServiceForm");
     if (!form) return;
+    const proceedButton = form.querySelector('button[type="submit"]');
     const ready = () => {
       const isValid = form.checkValidity();
       const payload = isValid ? getPayload() : null;
@@ -78,9 +78,8 @@
       if (current.kind === "recharge" && payload && payload.value < 500 && payload.count < 10) return false;
       return !!isValid && !!payload && Object.values(payload).every((x) => x !== "" && x !== null && x !== undefined);
     };
-    const schedule = () => {
-      clearTimeout(timer);
-      if (!ready()) { window.scheduleServicePurchasePrompt?.({ ready:false }); return; }
+    const schedule = (proceed = false) => {
+      if (!ready()) { window.scheduleServicePurchasePrompt?.({ ready:false, button:proceedButton }); return; }
       const payload = getPayload();
       const description = current.kind === "recharge" ? `Recharge PINs · ${payload.count} × ${money(payload.value)}` : current.kind === "sms" ? `Bulk SMS · ${payload.recipients.split(/[\\s,;]+/).filter(Boolean).length} recipients` : current.kind === "games" ? `Game top-up · ${node("extraGame").selectedOptions[0].text} · ${node("extraGameProduct").selectedOptions[0].text}` : current.title;
       window.scheduleServicePurchasePrompt?.({ ready:true, details:description, onConfirm:async (pin) => {
@@ -103,6 +102,7 @@
           if (typeof window.refreshHome === "function") await window.refreshHome();
           if (typeof window.loadTransactions === "function") await window.loadTransactions();
           form.reset();
+          schedule();
           return true;
         } catch (error) {
           status.className = "quick-service-status error";
@@ -111,11 +111,11 @@
           if (pinMessage) { pinMessage.textContent = error.message; pinMessage.className = "pin-prompt-message error"; }
           return false;
         }
-      } });
+      }, button:proceedButton, proceed });
     };
-    form.addEventListener("input", schedule);
-    form.addEventListener("change", schedule);
-    form.addEventListener("submit", (event) => { event.preventDefault(); schedule(); });
+    form.addEventListener("input", () => schedule(false));
+    form.addEventListener("change", () => schedule(false));
+    form.addEventListener("submit", (event) => { event.preventDefault(); schedule(true); });
     node("extraGame")?.addEventListener("change", async () => {
       const lineSelect = node("extraGameLine"), productSelect = node("extraGameProduct");
       lineSelect.disabled = true; productSelect.disabled = true;
@@ -143,7 +143,7 @@
       }).join("");
       schedule();
     });
-    node("extraGameProduct")?.addEventListener("change", schedule);
+    node("extraGameProduct")?.addEventListener("change", () => schedule(false));
     node("extraServiceId")?.addEventListener("change", () => {
       node("extraPlan").innerHTML = planSelect(catalog, node("extraServiceId").value);
       schedule();

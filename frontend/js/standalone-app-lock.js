@@ -2,7 +2,6 @@
   const tokenKey = "mamu_token";
   const lockedAtKey = "mamu_app_locked_at";
   const lockedStateKey = "mamu_app_is_locked";
-  const delay = 10_000;
   const token = () => localStorage.getItem(tokenKey);
   try {
     const account = JSON.parse(localStorage.getItem("mamu_user") || "null");
@@ -12,7 +11,7 @@
   } catch (_) { document.documentElement.dataset.theme = "light"; }
   if (!token()) return;
   let initialAwayAt = Number(localStorage.getItem(lockedAtKey)) || 0;
-  const shouldStartLocked = localStorage.getItem(lockedStateKey) === "1" || (initialAwayAt > 0 && Date.now() - initialAwayAt >= delay);
+  const shouldStartLocked = localStorage.getItem(lockedStateKey) === "1" || initialAwayAt > 0;
   if (!shouldStartLocked && initialAwayAt) localStorage.removeItem(lockedAtKey);
 
   const style = document.createElement("style");
@@ -49,7 +48,6 @@
   const error = root.querySelector(".error");
   let pin = "";
   let busy = false;
-  let timer;
   let biometricEnabled = false;
   const biometricButton = root.querySelector('[data-action="biometric"]');
   const fromBase64Url = (value) => {
@@ -103,16 +101,14 @@
     pin = ""; update(); error.textContent = "";
     root.hidden = false;
   };
-  const schedule = () => {
-    clearTimeout(timer);
-    if (!token() || root.isConnected && !root.hidden || !document.hidden) return;
-    const awayAt = Number(localStorage.getItem(lockedAtKey)) || Date.now();
-    timer = setTimeout(() => { if (document.hidden && token()) lock(); }, Math.max(0, delay - (Date.now() - awayAt)));
-  };
   const markAway = () => {
     if (!token() || root.isConnected && !root.hidden) return;
     try { localStorage.setItem(lockedAtKey, String(Date.now())); } catch (_) {}
-    schedule();
+  };
+  const checkAwayAndLock = () => {
+    if (document.hidden || !token() || root.isConnected && !root.hidden) return;
+    if (localStorage.getItem(lockedStateKey) === "1") lock();
+    else localStorage.removeItem(lockedAtKey);
   };
   if (shouldStartLocked) lock();
   root.addEventListener("click", async (event) => {
@@ -136,7 +132,7 @@
           const credential = await navigator.credentials.get({ publicKey: prepareOptions(options) });
           await passkeyFetch("/passkey/authenticate/verify", { credential: serializeCredential(credential) });
           localStorage.removeItem(lockedAtKey); localStorage.removeItem(lockedStateKey);
-          document.documentElement.dataset.appLockRequired = "false"; root.remove(); schedule(); return;
+          document.documentElement.dataset.appLockRequired = "false"; root.remove(); return;
         }
         error.textContent = "Set up fingerprint or Face ID in Settings first.";
       } catch (err) {
@@ -154,7 +150,7 @@
       const data = await response.json().catch(() => ({}));
       if (response.ok && data.success) {
         localStorage.removeItem(lockedAtKey); localStorage.removeItem(lockedStateKey);
-        document.documentElement.dataset.appLockRequired = "false"; root.remove(); schedule(); return;
+        document.documentElement.dataset.appLockRequired = "false"; root.remove(); return;
       }
       if (response.status === 400 && /transaction pin has not been created/i.test(data.message || "")) { location.href = "/index.html"; return; }
       if (response.status === 401 && !/incorrect transaction pin/i.test(data.message || "")) {
@@ -165,14 +161,6 @@
     } catch (_) { error.textContent = "Could not connect. Check your connection and try again."; }
     finally { busy = false; }
   }
-  const checkAwayAndLock = () => {
-    if (document.hidden) return;
-    clearTimeout(timer);
-    const awayAt = Number(localStorage.getItem(lockedAtKey)) || 0;
-    const shouldLockNow = localStorage.getItem(lockedStateKey) === "1" || (awayAt > 0 && Date.now() - awayAt >= delay);
-    if (shouldLockNow && token()) lock();
-    else if (awayAt) localStorage.removeItem(lockedAtKey);
-  };
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) markAway();
     else checkAwayAndLock();

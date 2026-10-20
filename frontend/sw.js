@@ -1,4 +1,4 @@
-const CACHE_NAME = "mamu-data-sub-v23";
+const CACHE_NAME = "mamu-data-sub-v27";
 
 const APP_FILES = [
   "/",

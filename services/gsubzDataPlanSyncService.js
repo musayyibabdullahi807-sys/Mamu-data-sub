@@ -11,7 +11,23 @@ const MTN_SME_PRICE_OVERRIDES = [
   { sizeGb: 12.5, days: 14, price: 5000 },
 ];
 
+const AIRTEL_SME_PRICE_OVERRIDES = new Map([
+  ["300mb - 2 days", 150],
+  ["600mb - 2 days", 250],
+  ["1.5gb - 1day", 450],
+  ["3gb- 2days", 1100],
+  ["10gb - 30days", 3500],
+]);
+
 function getSellingPrice(serviceId, planName, providerPrice, listedPrice) {
+  if (serviceId === "airtel_sme") {
+    const normalizedName = String(planName || "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+    return AIRTEL_SME_PRICE_OVERRIDES.get(normalizedName) ?? listedPrice;
+  }
+
   if (serviceId !== "mtn_sme") return listedPrice;
   const text = String(planName || "").toLowerCase().replace(/,/g, "");
   const sizeMatch = text.match(/(\d+(?:\.\d+)?)\s*(gb|g)\b/) || (() => {
