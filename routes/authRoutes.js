@@ -16,6 +16,11 @@ const protect = require("../middleware/authMiddleware");
 router.post("/signup", signup);
 router.post("/login", login);
 
+// Verify an existing browser token before the app chooses the dashboard.
+router.get("/session", protect, (req, res) => {
+  res.json({ success: true });
+});
+
 const passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
