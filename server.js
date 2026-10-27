@@ -58,10 +58,10 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
-// Open the app's main URL on the working login page. Existing sessions are
-// forwarded to the dashboard by login.js.
+// The root URL opens the app shell. Its client-side auth check sends signed-out
+// visitors to login and keeps signed-in visitors on the dashboard.
 app.get("/", (req, res) => {
-  res.redirect(302, "/login.html");
+  res.sendFile(path.join(__dirname, "frontend", "index.html"));
 });
 
 // Frontend
