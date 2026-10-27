@@ -61,7 +61,7 @@ app.use(limiter);
 // The root URL opens the app shell. Its client-side auth check sends signed-out
 // visitors to login and keeps signed-in visitors on the dashboard.
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "index.html"));
+  res.sendFile(path.join(__dirname, "frontend", "entry.html"));
 });
 
 // Frontend

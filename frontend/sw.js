@@ -1,8 +1,10 @@
-const CACHE_NAME = "mamu-data-sub-v28";
+const CACHE_NAME = "mamu-data-sub-v29";
 
 const APP_FILES = [
   "/",
   "/index.html",
+  "/entry.html",
+  "/js/entry.js",
   "/login.html",
   "/signup.html",
   "/manifest.json",
