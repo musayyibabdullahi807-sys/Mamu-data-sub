@@ -2552,6 +2552,11 @@ textarea:focus {
 
 .transaction-item {
   position: relative;
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
   background: var(--white);
   border: 1px solid #e8edf5;
   border-radius: 18px;

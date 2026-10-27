@@ -28,6 +28,13 @@ const protect = async (req, res, next) => {
       });
     }
 
+    if (Number(decoded.tokenVersion || 0) !== Number(user.tokenVersion || 0)) {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired. Please log in again.",
+      });
+    }
+
     if (user.accountStatus !== "active") {
       return res.status(403).json({
         success: false,

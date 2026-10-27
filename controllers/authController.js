@@ -2,10 +2,16 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../models/User");
+const { normalizeNigeriaPhone, getNigeriaPhoneCandidates } = require("../utils/nigeriaPhone");
+const {
+  isEmailConfigured,
+  sendPasswordResetEmail,
+  sendPasswordChangedEmail,
+} = require("../services/resendEmailService");
 
-const generateToken = (userId) => {
+const generateToken = (userId, tokenVersion = 0) => {
   return jwt.sign(
-    { userId },
+    { userId, tokenVersion },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -74,6 +80,14 @@ const signup = async (req, res) => {
       });
     }
 
+    const normalizedPhone = normalizeNigeriaPhone(phone);
+    if (!normalizedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter a valid Nigerian mobile number with exactly 11 digits, for example 08012345678.",
+      });
+    }
+
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
@@ -81,7 +95,9 @@ const signup = async (req, res) => {
       });
     }
 
-    const existingPhone = await User.findOne({ phone });
+    const existingPhone = await User.findOne({
+      phone: { $in: getNigeriaPhoneCandidates(normalizedPhone) },
+    });
 
     if (existingPhone) {
       return res.status(409).json({
@@ -128,14 +144,14 @@ const signup = async (req, res) => {
     const user = await User.create({
       username: newUsername,
       name,
-      phone,
+      phone: normalizedPhone,
       email: email || undefined,
       password: hashedPassword,
       referralCode: newReferralCode,
       referredBy,
     });
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion);
 
     res.status(201).json({
       success: true,
@@ -175,7 +191,17 @@ const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ phone });
+    const normalizedPhone = normalizeNigeriaPhone(phone, { allowLegacyTenDigit: true });
+    if (!normalizedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Enter a valid Nigerian mobile number, such as 08012345678 or +2348012345678.",
+      });
+    }
+
+    const user = await User.findOne({
+      phone: { $in: getNigeriaPhoneCandidates(normalizedPhone) },
+    });
 
     if (!user) {
       return res.status(401).json({
@@ -203,7 +229,7 @@ const login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user._id);
+    const token = generateToken(user._id, user.tokenVersion);
 
     res.json({
       success: true,
@@ -227,6 +253,107 @@ const login = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error during login",
+    });
+  }
+};
+
+
+
+const PASSWORD_RESET_MESSAGE =
+  "If an account with that email can be recovered, reset instructions will be sent shortly.";
+
+const requestPasswordReset = async (req, res) => {
+  if (!isEmailConfigured()) {
+    return res.status(503).json({
+      success: false,
+      message: "Password recovery email is not available yet. Please contact support.",
+    });
+  }
+
+  const email = String(req.body.email || "").trim().toLowerCase();
+  if (!email || email.length > 254) {
+    return res.json({ success: true, message: PASSWORD_RESET_MESSAGE });
+  }
+
+  try {
+    const user = await User.findOne({ email }).select("+passwordResetRequestedAt");
+    const cooldownMs = 60 * 1000;
+    const lastRequest = user?.passwordResetRequestedAt?.getTime() || 0;
+
+    if (user && user.email && Date.now() - lastRequest >= cooldownMs) {
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      user.passwordResetTokenHash = crypto
+        .createHash("sha256")
+        .update(rawToken)
+        .digest("hex");
+      user.passwordResetExpires = new Date(Date.now() + 30 * 60 * 1000);
+      user.passwordResetRequestedAt = new Date();
+      await user.save();
+
+      try {
+        await sendPasswordResetEmail({ to: user.email, token: rawToken });
+      } catch (emailError) {
+        user.passwordResetTokenHash = null;
+        user.passwordResetExpires = null;
+        await user.save();
+        console.error("Password reset email delivery failed:", emailError.message);
+      }
+    }
+
+    return res.json({ success: true, message: PASSWORD_RESET_MESSAGE });
+  } catch (error) {
+    console.error("Password reset request failed:", error.message);
+    return res.json({ success: true, message: PASSWORD_RESET_MESSAGE });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const rawToken = String(req.body.token || "");
+    const password = String(req.body.password || "");
+
+    if (!/^[a-f0-9]{64}$/i.test(rawToken) || password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "This reset link is invalid or expired. Request a new one.",
+      });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    const user = await User.findOne({
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpires: { $gt: new Date() },
+    }).select("+passwordResetTokenHash +passwordResetExpires");
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "This reset link is invalid or expired. Request a new one.",
+      });
+    }
+
+    user.password = await bcrypt.hash(password, 12);
+    user.tokenVersion = (user.tokenVersion || 0) + 1;
+    user.passwordResetTokenHash = null;
+    user.passwordResetExpires = null;
+    user.passwordResetRequestedAt = null;
+    await user.save();
+
+    if (user.email && isEmailConfigured()) {
+      sendPasswordChangedEmail(user.email).catch((error) => {
+        console.error("Password change notification failed:", error.message);
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Password changed. Please log in with your new password.",
+    });
+  } catch (error) {
+    console.error("Password reset failed:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Unable to reset your password. Please try again.",
     });
   }
 };
@@ -341,6 +468,8 @@ const resetTransactionPin = async (req, res) => {
 module.exports = {
   signup,
   login,
+  requestPasswordReset,
+  resetPassword,
   setTransactionPin,
   resetTransactionPin,
 };

@@ -248,21 +248,6 @@
         0 0 0 3px rgba(5, 5, 7, 0.06);
     }
 
-    .phone-prefix {
-      position: absolute;
-      left: 15px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 13px;
-      font-weight: 700;
-      color: #777982;
-      pointer-events: none;
-    }
-
-    .phone-input {
-      padding-left: 53px;
-    }
-
     /* =========================
        EYE BUTTON
        ========================= */
@@ -526,18 +511,23 @@
         <div class="form-group">
 
           <label for="name">
-            Full name
+            Your name
           </label>
 
           <input
             type="text"
             id="name"
             name="name"
-            placeholder="Enter your full name"
+            placeholder="Enter your name"
             autocomplete="name"
             maxlength="80"
+            autocapitalize="words"
             required
           >
+
+          <div class="hint">
+            We create your username automatically. You do not need to choose one.
+          </div>
 
         </div>
 
@@ -547,27 +537,22 @@
         <div class="form-group">
 
           <label for="phone">
-            Phone number
+            Nigerian phone number (11 digits)
           </label>
 
           <div class="input-wrap">
-
-            <span class="phone-prefix">
-              +234
-            </span>
-
             <input
               type="tel"
               id="phone"
               name="phone"
-              class="phone-input"
-              placeholder="8012345678"
-              autocomplete="tel"
+              placeholder="08012345678"
+              autocomplete="tel-national"
               inputmode="numeric"
-              maxlength="15"
+              maxlength="11"
+              pattern="0[789][0-9]{9}"
+              title="Enter an 11-digit Nigerian mobile number, for example 08012345678."
               required
             >
-
           </div>
 
         </div>
@@ -580,7 +565,7 @@
           <label for="email">
             Email
             <span class="optional">
-              (optional)
+              (optional; needed for password recovery)
             </span>
           </label>
 
@@ -637,49 +622,6 @@
 
           <div class="hint">
             Use at least 6 characters.
-          </div>
-
-        </div>
-
-
-        <!-- CONFIRM PASSWORD -->
-
-        <div class="form-group">
-
-          <label for="confirmPassword">
-            Confirm password
-          </label>
-
-          <div class="input-wrap">
-
-            <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              class="password-input"
-              placeholder="Enter your password again"
-              autocomplete="new-password"
-              minlength="6"
-              required
-            >
-
-            <button
-              type="button"
-              class="eye-btn"
-              id="toggleConfirmPassword"
-              aria-label="Show password"
-            >
-
-              <svg
-                id="confirmPasswordEye"
-                viewBox="0 0 24 24"
-              >
-                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/>
-                <circle cx="12" cy="12" r="2.5"/>
-              </svg>
-
-            </button>
-
           </div>
 
         </div>
@@ -748,6 +690,7 @@
   </main>
 
 
+  <script src="./js/nigeria-phone.js"></script>
   <script src="./js/signup.js"></script>
 
 </body>

@@ -35,11 +35,11 @@ function showMessage(text, type = "error") {
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const phone = phoneInput.value.trim();
+  const phone = window.normalizeNigeriaPhone(phoneInput.value, true);
   const password = passwordInput.value;
 
   if (!phone) {
-    showMessage("Please enter your phone number.");
+    showMessage("Enter a valid Nigerian mobile number, such as 08012345678 or +2348012345678.");
     phoneInput.focus();
     return;
   }

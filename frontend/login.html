@@ -184,6 +184,17 @@
 
     /* FORM */
 
+    .forgot-password-link {
+      margin: -8px 0 18px;
+      text-align: right;
+      font-size: 13px;
+    }
+
+    .forgot-password-link a {
+      color: #111111;
+      font-weight: 700;
+    }
+
     .form-group {
       margin-bottom: 18px;
     }
@@ -475,7 +486,7 @@
         <h2>Welcome back</h2>
 
         <p class="subtitle">
-          Login to continue to your account.
+          Use your phone number and password. You do not need a username.
         </p>
 
 
@@ -499,16 +510,16 @@
                 type="tel"
                 id="phone"
                 name="phone"
-                placeholder="Enter your phone number"
+                placeholder="08012345678 or +2348012345678"
                 autocomplete="tel"
-                inputmode="numeric"
+                inputmode="tel"
+                maxlength="18"
                 required
               >
 
             </div>
 
           </div>
-
 
           <div class="form-group">
 
@@ -543,6 +554,7 @@
 
           </div>
 
+          <p class="forgot-password-link"><a href="./forgot-password.html">Forgot password?</a></p>
 
           <button
             type="submit"
@@ -588,6 +600,7 @@
   </main>
 
 
+  <script src="./js/nigeria-phone.js"></script>
   <script src="./js/login.js"></script>
 
   <script>

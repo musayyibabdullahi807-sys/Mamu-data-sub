@@ -414,6 +414,7 @@ async function loadTransactions() {
       ? data.transactions
       : [];
 
+    historyTransactions = transactions;
     renderRecentTransactions(transactions);
     renderAllTransactions(transactions);
   } catch (error) {
@@ -451,6 +452,15 @@ function transactionIcon(type) {
 
   return icons[type] || `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8"/></svg>`;
 }
+
+function formatDateTime(dateValue) {
+  if (!dateValue) return "";
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-NG", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+let historyTransactions = [];
 
 function formatDate(dateValue) {
   if (!dateValue) return "";
@@ -497,7 +507,7 @@ const statusMap = {
 const statusInfo = statusMap[status] || statusMap.pending;
 
   return `
-    <div class="transaction-item">
+    <button type="button" class="transaction-item" data-transaction-index="${historyTransactions.indexOf(transaction)}" aria-label="View ${escapeHtml(transactionLabel(transaction.type))} details">
       <div class="transaction-icon">
         ${transactionIcon(transaction.type)}
       </div>
@@ -510,7 +520,7 @@ const statusInfo = statusMap[status] || statusMap.pending;
         <span>
           ${escapeHtml(
             transaction.description ||
-              formatDate(transaction.createdAt) ||
+              formatDateTime(transaction.createdAt) ||
               "Transaction"
           )}
         </span>
@@ -526,7 +536,7 @@ const statusInfo = statusMap[status] || statusMap.pending;
   ${escapeHtml(statusInfo.label)}
 </span>
       </div>
-    </div>
+    </button>
   `;
 }
 
@@ -980,6 +990,33 @@ function createPurchaseReceiptImage(receipt) {
     ctx.font = "500 17px system-ui, sans-serif";
     ctx.fillText("Thank you for using MAMU DATA SUB", 450, 958);
     canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("Could not render receipt image")), "image/png");
+  });
+}
+
+function showHistoryTransaction(transaction) {
+  if (!transaction) return;
+  const status = String(transaction.status || "pending").toLowerCase();
+  const statusLabels = { successful: "✓ Transaction Successful", success: "✓ Transaction Successful", failed: "❌ Transaction Failed", reversed: "↩ Transaction Reversed", pending: "⏳ Transaction Pending" };
+  const statusEl = $("receiptStatus");
+  statusEl.textContent = statusLabels[status] || "⏳ Transaction Pending";
+  statusEl.className = `receipt-status ${status === "failed" ? "failed" : status === "pending" ? "pending" : ""}`;
+  const meta = transaction.metadata && typeof transaction.metadata === "object" ? transaction.metadata : {};
+  $("receiptPhone").textContent = meta.phone || meta.recipient || "—";
+  $("receiptNetwork").textContent = meta.network || "—";
+  $("receiptPlan").textContent = transaction.description || transactionLabel(transaction.type);
+  $("receiptAmount").textContent = money(transaction.amount);
+  $("receiptReference").textContent = transaction.reference || "—";
+  $("receiptProviderReference").textContent = meta.providerReference || meta.provider_reference || "—";
+  $("receiptDate").textContent = formatDateTime(transaction.createdAt) || "—";
+  $("receiptBalance").textContent = "—";
+  currentReceipt = { status, phone: $("receiptPhone").textContent, network: $("receiptNetwork").textContent, plan: $("receiptPlan").textContent, amount: transaction.amount, reference: transaction.reference || "", providerReference: $("receiptProviderReference").textContent, walletBalance: 0, date: $("receiptDate").textContent };
+  $("receiptModal")?.classList.add("show");
+}
+
+function setupTransactionHistoryDetails() {
+  $("allTransactions")?.addEventListener("click", (event) => {
+    const item = event.target.closest("[data-transaction-index]");
+    if (item) showHistoryTransaction(historyTransactions[Number(item.dataset.transactionIndex)]);
   });
 }
 
@@ -2411,7 +2448,8 @@ async function initApp() {
 
   setupDataPurchase();
   setupServicePurchasePinPrompt();
-  setupPurchaseReceipt();  
+  setupPurchaseReceipt();
+  setupTransactionHistoryDetails();
   setupDataNetworkCards();
   setupAirtimePurchase();
   setupElectricityPayment();

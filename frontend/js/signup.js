@@ -5,7 +5,6 @@ const nameInput = document.getElementById("name");
 const phoneInput = document.getElementById("phone");
 const emailInput = document.getElementById("email");
 const passwordInput = document.getElementById("password");
-const confirmPasswordInput = document.getElementById("confirmPassword");
 const referralInput = document.getElementById("referralCode");
 const signupBtn = document.getElementById("signupBtn");
 const message = document.getElementById("message");
@@ -53,12 +52,6 @@ setupEyeButton(
   "passwordEye"
 );
 
-setupEyeButton(
-  "toggleConfirmPassword",
-  confirmPasswordInput,
-  "confirmPasswordEye"
-);
-
 function showMessage(text, type = "error") {
   if (!message) return;
 
@@ -72,20 +65,19 @@ if (signupForm) {
     event.preventDefault();
 
     const name = nameInput.value.trim();
-    const phone = phoneInput.value.trim();
+    const phone = window.normalizeNigeriaPhone(phoneInput.value, false);
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const confirmPassword = confirmPasswordInput.value;
     const referralCode = referralInput.value.trim();
 
     if (!name) {
-      showMessage("Please enter your full name.");
+      showMessage("Please enter your name.");
       nameInput.focus();
       return;
     }
 
     if (!phone) {
-      showMessage("Please enter your phone number.");
+      showMessage("Enter a valid Nigerian mobile number with exactly 11 digits, for example 08012345678.");
       phoneInput.focus();
       return;
     }
@@ -93,12 +85,6 @@ if (signupForm) {
     if (password.length < 6) {
       showMessage("Password must contain at least 6 characters.");
       passwordInput.focus();
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      showMessage("Passwords do not match.");
-      confirmPasswordInput.focus();
       return;
     }
 
