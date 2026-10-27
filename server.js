@@ -58,6 +58,12 @@ const limiter = rateLimit({
 
 app.use(limiter);
 
+// Open the app's main URL on the working login page. Existing sessions are
+// forwarded to the dashboard by login.js.
+app.get("/", (req, res) => {
+  res.redirect(302, "/login.html");
+});
+
 // Frontend
 app.use(express.static(path.join(__dirname, "frontend")));
 
@@ -86,11 +92,6 @@ app.use("/api/referral", referralRoutes);
 app.use("/api/security", securityRoutes);
 app.use("/api/marketplace", marketplaceRoutes);
 app.use("/api/services/gsubz", gsubzExtraRoutes);
-
-// Root
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend", "index.html"));
-});
 
 // Start server
 const PORT = process.env.PORT || 5000;
