@@ -10,6 +10,10 @@ const connectDB = require("./config/database");
 
 const app = express();
 
+// Vercel sits in front of Express and forwards the original client IP.
+// Trust one proxy hop so express-rate-limit can identify clients correctly.
+app.set("trust proxy", 1);
+
 // Routes
 const profileRoutes = require("./routes/profileRoutes");
 const walletRoutes = require("./routes/walletRoutes");
