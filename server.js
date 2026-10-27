@@ -7,7 +7,6 @@ require("dotenv").config();
 
 const connectDB = require("./config/database");
 
-connectDB();
 
 const app = express();
 
@@ -57,6 +56,18 @@ app.use(limiter);
 
 // Frontend
 app.use(express.static(path.join(__dirname, "frontend")));
+
+// Connect on demand so a database outage cannot terminate the Vercel function
+// before it can serve static pages. Reuse the cached connection across requests.
+app.use("/api", async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    console.error("❌ MongoDB connection failed:", error.message);
+    res.status(503).json({ success: false, message: "Service is temporarily unavailable. Please try again shortly." });
+  }
+});
 
 // API routes
 app.use("/api/profile", profileRoutes);
